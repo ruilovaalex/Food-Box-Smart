@@ -1,0 +1,5 @@
+{
+  "name": "Food Box Smart",
+  "description": "A smart food ordering application integrating with IoT food boxes for automated pickup.",
+  "requestFramePermissions": []
+}
