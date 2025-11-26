@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { Order, OrderStatus } from '../types';
 import { database } from '../services/database';
 
@@ -6,32 +7,55 @@ interface MqttContextType {
   orders: Order[];
   createOrder: (order: Order) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
-  simulateBoxKeypadEntry: (orderId: string, code: string) => boolean; // Admin helper
-  resetDatabase: () => void; // Admin helper
+  simulateBoxKeypadEntry: (orderId: string, code: string) => boolean;
+  resetDatabase: () => void;
 }
 
 const MqttContext = createContext<MqttContextType | undefined>(undefined);
 
-// This simulates the Backend + MQTT Broker + ESP32 Logic + Database persistence
 export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [orders, setOrders] = useState<Order[]>([]);
+  
+  // Usamos una referencia para mantener el acceso al estado más reciente de las órdenes
+  // dentro de los intervalos (setInterval) sin necesidad de reiniciar el temporizador
+  // cada vez que el estado cambia. Esto soluciona el bloqueo en "Preparando".
+  const ordersRef = useRef<Order[]>([]);
 
-  // Load from database on mount
+  // Sincronizar la referencia con el estado cada vez que cambie
   useEffect(() => {
-    const loadedOrders = database.getOrders();
-    setOrders(loadedOrders);
+    ordersRef.current = orders;
+  }, [orders]);
+
+  // 1. Suscripción a Firebase (Tiempo Real)
+  useEffect(() => {
+    const unsubscribe = database.subscribeToOrders((newOrders) => {
+      setOrders(currentOrders => {
+        // Fusionar datos de Firebase con temperaturas simuladas locales
+        return newOrders.map(newOrder => {
+            const existing = currentOrders.find(o => o.id === newOrder.id);
+            return {
+                ...newOrder,
+                simulatedTemps: existing?.simulatedTemps // Mantener temp local
+            };
+        });
+      });
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  // Simulate Real-time Temperature MQTT updates from ESP32
-  // We do NOT save these temp fluctuations to DB to avoid thrashing localStorage
+  // 2. Simulación de Sensores (Local - No afecta Firebase)
   useEffect(() => {
     const interval = setInterval(() => {
       setOrders(prevOrders => {
         return prevOrders.map(order => {
-          if (order.status === 'pending' || order.status === 'paid' || order.status === 'ready') {
-            // Simulate sensors fluctuations
-            const newHot = 60 + Math.random() * 5; // 60-65 C
-            const newCold = 3 + Math.random() * 2; // 3-5 C
+          if (['pending', 'paid', 'ready'].includes(order.status)) {
+            const currentHot = order.simulatedTemps?.hot || 60;
+            const currentCold = order.simulatedTemps?.cold || 4;
+            
+            const newHot = currentHot + (Math.random() - 0.5); 
+            const newCold = currentCold + (Math.random() - 0.5);
+
             return {
               ...order,
               simulatedTemps: {
@@ -43,48 +67,52 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return order;
         });
       });
-    }, 3000); // Update every 3 seconds
+    }, 2000); 
 
     return () => clearInterval(interval);
   }, []);
 
-  const createOrder = (order: Order) => {
-    // Save to State and Database
-    const newOrders = database.addOrder(order);
-    setOrders(newOrders);
-    
-    // Simulate MQTT publish: foodbox/orders/{id}/code
-    console.log(`[MQTT] Published Code for Order ${order.id}: ${order.code}`);
+  // 3. WORKER DE COCINA (Respaldo Automático)
+  // Ahora usa ordersRef para NO reiniciar el intervalo con cada renderizado.
+  useEffect(() => {
+    const kitchenTimer = setInterval(() => {
+        const now = Date.now();
+        // Leemos desde la referencia (siempre actualizada) sin romper el ciclo del timer
+        ordersRef.current.forEach(order => {
+            // Si la orden está pendiente y pasó el tiempo de "cocción" (simulado)
+            if (order.status === 'pending' && (now - order.createdAt > 3000)) {
+                console.log(`[COCINA] La orden ${order.code} está lista. Actualizando...`);
+                updateOrderStatus(order.id, 'ready');
+            }
+        });
+    }, 1000); // Revisamos cada segundo para mayor reactividad
 
-    // Simulate cooking time then "Ready"
-    setTimeout(() => {
-        updateOrderStatus(order.id, 'ready');
-        console.log(`[MQTT] Order ${order.id} is now READY in the box.`);
-    }, 5000); 
+    return () => clearInterval(kitchenTimer);
+  }, []); // Dependencias vacías = El timer nunca se detiene/reinicia
+
+  const createOrder = async (order: Order) => {
+    try {
+        console.log(`[APP] Enviando orden ${order.code} a Firebase...`);
+        await database.addOrder(order);
+    } catch (error) {
+        console.error("Error creando orden:", error);
+    }
   };
 
-  const updateOrderStatus = (orderId: string, status: OrderStatus) => {
-    setOrders(prev => {
-        const targetOrder = prev.find(o => o.id === orderId);
-        if (!targetOrder) return prev;
-        
-        const updatedOrder = { ...targetOrder, status };
-        
-        // Persist the status change
-        database.updateOrder(updatedOrder);
-        
-        return prev.map(o => o.id === orderId ? updatedOrder : o);
-    });
+  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+    try {
+        await database.updateOrderStatus(orderId, status);
+    } catch (error) {
+        console.error(`Error actualizando estado:`, error);
+    }
   };
 
-  // Simulate the physical box keypad interaction
   const simulateBoxKeypadEntry = (orderId: string, inputCode: string) => {
-    const order = orders.find(o => o.id === orderId);
+    // Usamos la referencia para buscar, asegurando tener los datos más recientes
+    const order = ordersRef.current.find(o => o.id === orderId);
     if (!order) return false;
 
     if (order.code === inputCode) {
-      console.log(`[ESP32] Keypad Success. Box Opening for Order ${orderId}`);
-      // Simulate box opening logic via MQTT
       updateOrderStatus(orderId, 'delivered'); 
       return true;
     }
@@ -92,8 +120,7 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const resetDatabase = () => {
-      const empty = database.clearDatabase();
-      setOrders(empty);
+      database.clearDatabase();
   };
 
   return (

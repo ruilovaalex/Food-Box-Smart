@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useMqtt } from '../context/MqttContext';
 import { useAuth } from '../context/AuthContext';
@@ -37,63 +38,68 @@ interface OrderRowCardProps {
     onViewDetails: (order: Order) => void;
 }
 
-const OrderRowCard: React.FC<OrderRowCardProps> = ({ order, onViewDetails }) => (
-    <Card className="p-5 mb-4 border border-gray-100 shadow-sm hover:shadow-md transition-all">
-        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-            {/* ID & Code */}
-            <div className="flex items-center gap-4 min-w-[150px]">
-                <div>
-                    <p className="text-xs text-gray-400 mb-1">Código:</p>
-                    <h4 className="text-2xl font-bold text-primary tracking-wide font-mono">{order.code}</h4>
+const OrderRowCard: React.FC<OrderRowCardProps> = ({ order, onViewDetails }) => {
+    // Safe access to user ID to prevent crashes
+    const displayName = order.userId ? order.userId.split('@')[0] : 'Invitado';
+    
+    return (
+        <Card className="p-5 mb-4 border border-gray-100 shadow-sm hover:shadow-md transition-all">
+            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                {/* ID & Code */}
+                <div className="flex items-center gap-4 min-w-[150px]">
+                    <div>
+                        <p className="text-xs text-gray-400 mb-1">Código:</p>
+                        <h4 className="text-2xl font-bold text-primary tracking-wide font-mono">{order.code || '----'}</h4>
+                    </div>
                 </div>
-            </div>
 
-            {/* User Info */}
-            <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xl">👤</span>
-                    <span className="font-bold text-dark">{order.userId.split('@')[0]}</span>
+                {/* User Info */}
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">👤</span>
+                        <span className="font-bold text-dark">{displayName}</span>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                        {order.items && order.items.slice(0, 2).map((item, idx) => (
+                            <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
+                                {item.quantity}x {item.name}
+                            </span>
+                        ))}
+                        {order.items && order.items.length > 2 && <span className="text-xs text-gray-400 px-1">+{order.items.length - 2} más</span>}
+                    </div>
                 </div>
-                <div className="flex gap-2 flex-wrap">
-                    {order.items.slice(0, 2).map((item, idx) => (
-                        <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
-                            {item.quantity}x {item.name}
+
+                {/* Meta & Status */}
+                <div className="flex flex-row md:flex-col justify-between items-end gap-2 md:gap-1 min-w-[140px]">
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                        order.status === 'delivered' ? 'bg-green-100 text-green-700' :
+                        order.status === 'ready' ? 'bg-blue-100 text-blue-700' :
+                        order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                        'bg-orange-100 text-orange-700'
+                        }`}>
+                            {order.status === 'delivered' ? '✓ Completado' : 
+                            order.status === 'ready' ? '⚡ Listo' : 
+                            order.status === 'pending' ? '⏳ Pendiente' : order.status}
                         </span>
-                    ))}
-                    {order.items.length > 2 && <span className="text-xs text-gray-400 px-1">+{order.items.length - 2} más</span>}
+                        <p className="text-gray-400 text-xs">
+                        {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '-'}
+                        </p>
+                        <p className="text-xl font-bold text-green-600">
+                        ${(order.total || 0).toFixed(2)}
+                        </p>
                 </div>
             </div>
-
-            {/* Meta & Status */}
-            <div className="flex flex-row md:flex-col justify-between items-end gap-2 md:gap-1 min-w-[140px]">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                    order.status === 'delivered' ? 'bg-green-100 text-green-700' :
-                    order.status === 'ready' ? 'bg-blue-100 text-blue-700' :
-                    order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                    'bg-orange-100 text-orange-700'
-                    }`}>
-                        {order.status === 'delivered' ? '✓ Completado' : 
-                        order.status === 'ready' ? '⚡ Listo' : 
-                        order.status === 'pending' ? '⏳ Pendiente' : order.status}
-                    </span>
-                    <p className="text-gray-400 text-xs">
-                    {new Date(order.createdAt).toLocaleDateString()}
-                    </p>
-                    <p className="text-xl font-bold text-green-600">
-                    ${order.total.toFixed(2)}
-                    </p>
+            <div className="mt-4 pt-3 border-t border-gray-50 flex justify-end">
+                <button 
+                    onClick={() => onViewDetails(order)}
+                    className="text-sm text-primary font-bold hover:underline flex items-center gap-1"
+                >
+                    <span>📄</span> Ver Detalles Completos
+                </button>
             </div>
-        </div>
-        <div className="mt-4 pt-3 border-t border-gray-50 flex justify-end">
-            <button 
-                onClick={() => onViewDetails(order)}
-                className="text-sm text-primary font-bold hover:underline flex items-center gap-1"
-            >
-                <span>📄</span> Ver Detalles Completos
-            </button>
-        </div>
-    </Card>
-);
+        </Card>
+    );
+};
 
 interface OrderDetailModalProps {
     order: Order;
@@ -102,8 +108,9 @@ interface OrderDetailModalProps {
 
 const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) => {
     if (!order) return null;
-    const hasHot = order.items.some(i => i.type === 'hot');
-    const hasCold = order.items.some(i => i.type === 'cold');
+    const hasHot = order.items ? order.items.some(i => i.type === 'hot') : false;
+    const hasCold = order.items ? order.items.some(i => i.type === 'cold') : false;
+    const displayName = order.userId ? order.userId.split('@')[0] : 'Invitado';
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
@@ -121,15 +128,15 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) =
                 <div className="p-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
                     <div className="text-center mb-6">
                         <p className="text-sm text-primary font-bold mb-1">Código de Retiro</p>
-                        <span className="text-5xl font-black text-primary font-mono tracking-widest">{order.code}</span>
+                        <span className="text-5xl font-black text-primary font-mono tracking-widest">{order.code || '----'}</span>
                     </div>
 
                     <div className="space-y-6">
                         <div>
                             <h4 className="text-sm font-bold text-primary mb-3">Cliente</h4>
                             <div className="bg-gray-50 p-4 rounded-xl space-y-2 text-sm">
-                                <p><span className="font-bold text-dark">Nombre:</span> {order.userId.split('@')[0]}</p>
-                                <p><span className="font-bold text-dark">Email:</span> {order.userId}</p>
+                                <p><span className="font-bold text-dark">Nombre:</span> {displayName}</p>
+                                <p><span className="font-bold text-dark">Email:</span> {order.userId || 'No registrado'}</p>
                                 <p><span className="font-bold text-dark">ID Orden:</span> #{order.id}</p>
                             </div>
                         </div>
@@ -137,7 +144,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) =
                         <div>
                             <h4 className="text-sm font-bold text-primary mb-3">Productos</h4>
                             <div className="space-y-2">
-                                {order.items.map((item, idx) => (
+                                {order.items && order.items.map((item, idx) => (
                                     <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
                                         <div className="flex items-center gap-3">
                                             <span className="font-bold text-gray-500">{item.quantity}x</span>
@@ -150,14 +157,14 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) =
                             </div>
                             <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
                                 <span className="text-xl font-extrabold text-dark">Total:</span>
-                                <span className="text-3xl font-black text-green-600">${order.total.toFixed(2)}</span>
+                                <span className="text-3xl font-black text-green-600">${(order.total || 0).toFixed(2)}</span>
                             </div>
                         </div>
 
                         <div>
                             <h4 className="text-sm font-bold text-primary mb-3">Información Adicional</h4>
                             <div className="text-sm space-y-2 text-gray-600">
-                                <p><span className="font-bold">Fecha:</span> {new Date(order.createdAt).toLocaleString()}</p>
+                                <p><span className="font-bold">Fecha:</span> {order.createdAt ? new Date(order.createdAt).toLocaleString() : 'Desconocida'}</p>
                                 <p className="flex items-center gap-2">
                                     <span className="font-bold">Estado:</span> 
                                     {order.status === 'delivered' ? <span className="text-green-600 font-bold">✓ Completado</span> : order.status}
@@ -185,12 +192,13 @@ export const AdminDashboard: React.FC = () => {
     const [selectedOrderDetails, setSelectedOrderDetails] = useState<Order | null>(null);
 
     // --- Stats Calculations ---
-    const totalIncome = orders.reduce((acc, o) => acc + (o.status !== 'cancelled' ? o.total : 0), 0);
+    const totalIncome = orders.reduce((acc, o) => acc + (o.status !== 'cancelled' ? (o.total || 0) : 0), 0);
     const completedOrders = orders.filter(o => o.status !== 'cancelled').length;
-    const totalItemsSold = orders.reduce((acc, o) => acc + (o.status !== 'cancelled' ? o.items.reduce((s, i) => s + i.quantity, 0) : 0), 0);
+    const totalItemsSold = orders.reduce((acc, o) => acc + (o.status !== 'cancelled' && o.items ? o.items.reduce((s, i) => s + i.quantity, 0) : 0), 0);
     
     const today = new Date();
     const ordersToday = orders.filter(o => {
+        if (!o.createdAt) return false;
         const d = new Date(o.createdAt);
         return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
     }).length;
@@ -198,7 +206,7 @@ export const AdminDashboard: React.FC = () => {
     // Top Products Calculation
     const productStats: Record<string, {name: string, count: number, revenue: number}> = {};
     orders.forEach(o => {
-        if(o.status !== 'cancelled') {
+        if(o.status !== 'cancelled' && o.items) {
             o.items.forEach(item => {
                 if(!productStats[item.name]) productStats[item.name] = { name: item.name, count: 0, revenue: 0 };
                 productStats[item.name].count += item.quantity;
@@ -209,11 +217,17 @@ export const AdminDashboard: React.FC = () => {
     const topProducts = Object.values(productStats).sort((a,b) => b.count - a.count).slice(0, 3);
 
     // Filtered History Logic
-    const filteredOrders = orders.filter(o => 
-        o.id.includes(searchTerm) || 
-        o.code.includes(searchTerm) ||
-        o.userId.toLowerCase().includes(searchTerm.toLowerCase())
-    ).sort((a,b) => b.createdAt - a.createdAt);
+    // PROTECTED AGAINST UNDEFINED VALUES
+    const filteredOrders = orders.filter(o => {
+        const id = o.id || '';
+        const code = o.code || '';
+        const userId = o.userId || '';
+        const term = searchTerm.toLowerCase();
+        
+        return id.includes(term) || 
+               code.includes(term) ||
+               userId.toLowerCase().includes(term);
+    }).sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
 
 
     // --- Handlers ---
@@ -341,12 +355,12 @@ export const AdminDashboard: React.FC = () => {
                                                 <span className="text-2xl font-black text-blue-200">#{idx + 1}</span>
                                                 <span className="font-bold text-dark text-lg">{prod.name}</span>
                                             </div>
-                                            <span className="text-2xl font-black text-primary">{Math.round((prod.count / totalItemsSold) * 100)}%</span>
+                                            <span className="text-2xl font-black text-primary">{Math.round((prod.count / (totalItemsSold || 1)) * 100)}%</span>
                                         </div>
                                         <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                                             <div 
                                                 className="bg-primary h-full rounded-full" 
-                                                style={{ width: `${(prod.count / totalItemsSold) * 100}%` }}
+                                                style={{ width: `${(prod.count / (totalItemsSold || 1)) * 100}%` }}
                                             ></div>
                                         </div>
                                         <div className="flex justify-between mt-2 text-xs text-gray-400">
@@ -495,3 +509,4 @@ export const AdminDashboard: React.FC = () => {
         </PageLayout>
     );
 };
+    

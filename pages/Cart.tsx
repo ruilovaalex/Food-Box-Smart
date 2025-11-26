@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { useMqtt } from '../context/MqttContext';
@@ -17,7 +18,19 @@ export const Cart: React.FC = () => {
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
-  const [formErrors, setFormErrors] = useState<{name?: string, phone?: string}>({});
+  
+  // Card States
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+
+  const [formErrors, setFormErrors] = useState<{
+      name?: string, 
+      phone?: string,
+      cardNumber?: string,
+      cardExpiry?: string,
+      cardCvv?: string
+    }>({});
 
   if (items.length === 0) {
     return (
@@ -38,10 +51,16 @@ export const Cart: React.FC = () => {
   }
 
   const validateForm = () => {
-      const errors: {name?: string, phone?: string} = {};
+      const errors: typeof formErrors = {};
       if(!name.trim()) errors.name = "El nombre es obligatorio.";
       if(!phone.trim() || phone.length < 7) errors.phone = "Ingresa un teléfono válido.";
       
+      if (paymentMethod === 'card') {
+          if (!cardNumber || cardNumber.replace(/\s/g, '').length < 16) errors.cardNumber = "Número de tarjeta incompleto.";
+          if (!cardExpiry) errors.cardExpiry = "Requerido.";
+          if (!cardCvv || cardCvv.length < 3) errors.cardCvv = "Inválido.";
+      }
+
       setFormErrors(errors);
       return Object.keys(errors).length === 0;
   };
@@ -51,6 +70,7 @@ export const Cart: React.FC = () => {
 
     setIsProcessing(true);
     // Simulate payment processing delay with randomness
+    // REDUCIDO: De 2000ms a 500ms para mayor fluidez
     setTimeout(() => {
         const orderCode = Math.floor(1000 + Math.random() * 9000).toString();
         
@@ -73,7 +93,23 @@ export const Cart: React.FC = () => {
         clearCart();
         setIsProcessing(false);
         navigate(`/order/${newOrder.id}`);
-    }, 2000);
+    }, 500);
+  };
+
+  // Helper para formatear tarjeta
+  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      let val = e.target.value.replace(/\D/g, '');
+      val = val.substring(0, 16);
+      val = val.replace(/(\d{4})(?=\d)/g, '$1 ');
+      setCardNumber(val);
+  };
+
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/\D/g, '');
+    if (val.length >= 2) {
+        val = val.substring(0, 2) + '/' + val.substring(2, 4);
+    }
+    setCardExpiry(val);
   };
 
   return (
@@ -126,6 +162,8 @@ export const Cart: React.FC = () => {
                 <Input 
                     label="Nombre Completo"
                     placeholder="Ej. Juan Pérez"
+                    name="name"
+                    autoComplete="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     error={formErrors.name}
@@ -134,6 +172,8 @@ export const Cart: React.FC = () => {
                     label="Número de Teléfono"
                     type="tel"
                     placeholder="099..."
+                    name="phone"
+                    autoComplete="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     error={formErrors.phone}
@@ -141,7 +181,7 @@ export const Cart: React.FC = () => {
                 
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 ml-1">Método de Pago</label>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3 mb-4">
                         <button 
                             className={`p-3 rounded-2xl border font-bold text-sm flex items-center justify-center gap-2 transition-all ${
                                 paymentMethod === 'cash' 
@@ -163,6 +203,40 @@ export const Cart: React.FC = () => {
                             <span>💳</span> Tarjeta
                         </button>
                     </div>
+
+                    {/* Card Input Fields - Conditional Rendering */}
+                    {paymentMethod === 'card' && (
+                        <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-4 animate-fade-in">
+                            <Input 
+                                label="Número de Tarjeta"
+                                placeholder="0000 0000 0000 0000"
+                                value={cardNumber}
+                                onChange={handleCardNumberChange}
+                                error={formErrors.cardNumber}
+                                maxLength={19}
+                                icon={<span className="text-gray-400">💳</span>}
+                            />
+                            <div className="grid grid-cols-2 gap-4">
+                                <Input 
+                                    label="Expiración"
+                                    placeholder="MM/YY"
+                                    value={cardExpiry}
+                                    onChange={handleExpiryChange}
+                                    error={formErrors.cardExpiry}
+                                    maxLength={5}
+                                />
+                                <Input 
+                                    label="CVV"
+                                    placeholder="123"
+                                    type="password"
+                                    maxLength={3}
+                                    value={cardCvv}
+                                    onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
+                                    error={formErrors.cardCvv}
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
