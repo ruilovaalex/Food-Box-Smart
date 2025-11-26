@@ -1,32 +1,29 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Order, OrderStatus } from '../types';
+import { database } from '../services/database';
 
 interface MqttContextType {
   orders: Order[];
   createOrder: (order: Order) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   simulateBoxKeypadEntry: (orderId: string, code: string) => boolean; // Admin helper
+  resetDatabase: () => void; // Admin helper
 }
 
 const MqttContext = createContext<MqttContextType | undefined>(undefined);
 
-// This simulates the Backend + MQTT Broker + ESP32 Logic
+// This simulates the Backend + MQTT Broker + ESP32 Logic + Database persistence
 export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [orders, setOrders] = useState<Order[]>([]);
 
-  // Simulate persistent database
+  // Load from database on mount
   useEffect(() => {
-    const storedOrders = localStorage.getItem('foodbox_orders');
-    if (storedOrders) {
-      setOrders(JSON.parse(storedOrders));
-    }
+    const loadedOrders = database.getOrders();
+    setOrders(loadedOrders);
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('foodbox_orders', JSON.stringify(orders));
-  }, [orders]);
-
   // Simulate Real-time Temperature MQTT updates from ESP32
+  // We do NOT save these temp fluctuations to DB to avoid thrashing localStorage
   useEffect(() => {
     const interval = setInterval(() => {
       setOrders(prevOrders => {
@@ -52,7 +49,9 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const createOrder = (order: Order) => {
-    setOrders(prev => [order, ...prev]);
+    // Save to State and Database
+    const newOrders = database.addOrder(order);
+    setOrders(newOrders);
     
     // Simulate MQTT publish: foodbox/orders/{id}/code
     console.log(`[MQTT] Published Code for Order ${order.id}: ${order.code}`);
@@ -65,7 +64,17 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateOrderStatus = (orderId: string, status: OrderStatus) => {
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+    setOrders(prev => {
+        const targetOrder = prev.find(o => o.id === orderId);
+        if (!targetOrder) return prev;
+        
+        const updatedOrder = { ...targetOrder, status };
+        
+        // Persist the status change
+        database.updateOrder(updatedOrder);
+        
+        return prev.map(o => o.id === orderId ? updatedOrder : o);
+    });
   };
 
   // Simulate the physical box keypad interaction
@@ -76,16 +85,19 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (order.code === inputCode) {
       console.log(`[ESP32] Keypad Success. Box Opening for Order ${orderId}`);
       // Simulate box opening logic via MQTT
-      // Topic: foodbox/orders/{id}/status payload: 'opened'
-      // Ideally the backend listens to this and updates the DB. We simulate that here:
       updateOrderStatus(orderId, 'delivered'); 
       return true;
     }
     return false;
   };
 
+  const resetDatabase = () => {
+      const empty = database.clearDatabase();
+      setOrders(empty);
+  };
+
   return (
-    <MqttContext.Provider value={{ orders, createOrder, updateOrderStatus, simulateBoxKeypadEntry }}>
+    <MqttContext.Provider value={{ orders, createOrder, updateOrderStatus, simulateBoxKeypadEntry, resetDatabase }}>
       {children}
     </MqttContext.Provider>
   );

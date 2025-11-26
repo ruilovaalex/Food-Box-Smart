@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { User } from '../types';
-import { MOCK_USER_ID, MOCK_ADMIN_ID } from '../constants';
 
 interface AuthContextType {
   user: User | null;
@@ -16,11 +15,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = (identifier: string, password?: string, isAdmin: boolean = false): boolean => {
     if (isAdmin) {
       // Validación estricta para Admin
-      // Usuario: admin
-      // Contraseña: admin123
       if (identifier === 'admin' && password === 'admin123') {
         setUser({
-          id: MOCK_ADMIN_ID,
+          id: 'admin-master-id',
           name: 'Administrador',
           email: 'admin@foodbox.com',
           role: 'admin'
@@ -30,8 +27,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return false; // Login fallido
     } else {
       // Login de Cliente (Solo Email)
+      // AQUI EL CAMBIO: Usamos el email como ID único para separar historiales
       setUser({
-        id: MOCK_USER_ID,
+        id: identifier.toLowerCase().trim(), // El ID es el email
         name: identifier.split('@')[0], // Usa la parte antes del @ como nombre
         email: identifier,
         role: 'client'

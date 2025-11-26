@@ -174,7 +174,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) =
 }
 
 export const AdminDashboard: React.FC = () => {
-    const { orders, simulateBoxKeypadEntry } = useMqtt();
+    const { orders, simulateBoxKeypadEntry, resetDatabase } = useMqtt();
     const { logout, user } = useAuth();
     const navigate = useNavigate();
     
@@ -231,12 +231,20 @@ export const AdminDashboard: React.FC = () => {
         }
     };
 
+    const handleResetDB = () => {
+        if(window.confirm("¿Estás seguro de que quieres borrar TODOS los pedidos? Esta acción no se puede deshacer.")) {
+            resetDatabase();
+            alert("Base de datos reiniciada.");
+        }
+    };
+
     return (
         <PageLayout className="bg-gray-100">
             {/* Top Bar */}
             <div className="bg-white border-b border-gray-200 sticky top-0 z-40 px-6 py-4 flex items-center justify-between shadow-sm">
                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center text-2xl">🍔</div>
+                    <img src="/images/logo.png" alt="Logo" className="w-10 h-10 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden') }} />
+                    <div className="hidden w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center text-2xl">🍔</div>
                     <div>
                         <h1 className="font-extrabold text-dark text-lg leading-tight">Food Box <span className="text-primary">Smart</span></h1>
                         <p className="text-xs text-primary font-bold">{user?.name}</p>
@@ -427,43 +435,55 @@ export const AdminDashboard: React.FC = () => {
                             </div>
                         </div>
 
-                        <Card className="bg-dark text-white p-8 border-gray-800 shadow-2xl h-fit sticky top-24">
-                            <div className="flex items-center gap-3 mb-8">
-                                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_#22c55e]"></div>
-                                <h3 className="font-mono text-xl tracking-wider">ESP32_SIMULATOR_V1</h3>
-                            </div>
+                        <div className="space-y-4 sticky top-24 h-fit">
+                            <Card className="bg-dark text-white p-8 border-gray-800 shadow-2xl">
+                                <div className="flex items-center gap-3 mb-8">
+                                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_#22c55e]"></div>
+                                    <h3 className="font-mono text-xl tracking-wider">ESP32_SIMULATOR_V1</h3>
+                                </div>
 
-                            <form onSubmit={handleSimulateKeypad} className="space-y-6">
-                                <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700">
-                                    <label className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1 block">ID Destino</label>
-                                    <div className="font-mono text-2xl text-primary font-bold">
-                                        {selectedOrderIdForSim ? `#${selectedOrderIdForSim.slice(-4)}` : '---'}
+                                <form onSubmit={handleSimulateKeypad} className="space-y-6">
+                                    <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700">
+                                        <label className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1 block">ID Destino</label>
+                                        <div className="font-mono text-2xl text-primary font-bold">
+                                            {selectedOrderIdForSim ? `#${selectedOrderIdForSim.slice(-4)}` : '---'}
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div>
-                                    <label className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-3 block">Teclado Numérico</label>
-                                    <input 
-                                        type="text" 
-                                        maxLength={4}
-                                        className="w-full bg-gray-900 text-white text-center text-4xl tracking-[0.5em] py-6 rounded-2xl border border-gray-700 focus:border-primary outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono placeholder-gray-800"
-                                        value={simulatedKeypadInput}
-                                        onChange={(e) => setSimulatedKeypadInput(e.target.value.replace(/[^0-9]/g, ''))}
-                                        placeholder="0000"
+                                    <div>
+                                        <label className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-3 block">Teclado Numérico</label>
+                                        <input 
+                                            type="text" 
+                                            maxLength={4}
+                                            className="w-full bg-gray-900 text-white text-center text-4xl tracking-[0.5em] py-6 rounded-2xl border border-gray-700 focus:border-primary outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono placeholder-gray-800"
+                                            value={simulatedKeypadInput}
+                                            onChange={(e) => setSimulatedKeypadInput(e.target.value.replace(/[^0-9]/g, ''))}
+                                            placeholder="0000"
+                                            disabled={!selectedOrderIdForSim}
+                                        />
+                                    </div>
+
+                                    <Button 
+                                        type="submit" 
+                                        fullWidth 
                                         disabled={!selectedOrderIdForSim}
-                                    />
-                                </div>
+                                        className={!selectedOrderIdForSim ? 'opacity-50 grayscale' : 'bg-primary hover:bg-orange-600 !py-4'}
+                                    >
+                                        ABRIR CAJA (SIMULACIÓN)
+                                    </Button>
+                                </form>
+                            </Card>
 
-                                <Button 
-                                    type="submit" 
-                                    fullWidth 
-                                    disabled={!selectedOrderIdForSim}
-                                    className={!selectedOrderIdForSim ? 'opacity-50 grayscale' : 'bg-primary hover:bg-orange-600 !py-4'}
-                                >
-                                    ABRIR CAJA (SIMULACIÓN)
-                                </Button>
-                            </form>
-                        </Card>
+                            <Button 
+                                variant="outline"
+                                onClick={handleResetDB}
+                                fullWidth
+                                className="text-red-500 border-red-200 hover:bg-red-50"
+                                icon={<span>🗑️</span>}
+                            >
+                                Resetear Base de Datos
+                            </Button>
+                        </div>
                     </div>
                 )}
             </div>

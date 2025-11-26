@@ -45,10 +45,25 @@ export const Login: React.FC = () => {
   return (
     <PageLayout className="flex items-center justify-center p-6 bg-gradient-to-br from-orange-50 to-white">
       <div className="w-full max-w-md animate-slide-up">
-        <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-tr from-primary to-orange-400 rounded-3xl shadow-xl shadow-orange-500/20 mb-4 transform rotate-3">
-                <span className="text-4xl drop-shadow-md">🍔</span>
+        <div className="text-center mb-8 flex flex-col items-center">
+            {/* LOGO EMPRESARIAL */}
+            <div className="w-48 h-48 mb-6 relative">
+                <img 
+                    src="/images/logo.png" 
+                    alt="Logo Empresa" 
+                    className="w-full h-full object-contain drop-shadow-xl"
+                    onError={(e) => {
+                        // Fallback si la imagen no existe
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                    }}
+                />
+                {/* Fallback visual si no se carga el logo */}
+                <div className="hidden w-full h-full bg-gradient-to-tr from-primary to-orange-400 rounded-3xl flex items-center justify-center shadow-xl shadow-orange-500/20 transform rotate-3">
+                    <span className="text-6xl">🍔</span>
+                </div>
             </div>
+            
             <h1 className="text-2xl font-extrabold text-dark tracking-tight mb-1">Food Box Smart</h1>
             <p className="text-gray-500 font-medium text-sm">
                 {mode === 'client' ? 'Pide tu comida favorita al instante.' : 'Panel de Administración'}
