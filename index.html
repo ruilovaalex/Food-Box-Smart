@@ -4,26 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Food Box Smart</title>
+    <link rel="icon" type="image/png" href="/images/logo.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              primary: '#FF8A2B',
-              secondary: '#FFB070',
-              accent: '#20C6B0',
-              dark: '#1A202C',
+              primary: '#FF8A2B', // Naranja Principal
+              secondary: '#FFB070', // Naranja Claro
+              accent: '#20C6B0', // Verde Azulado (Teal)
+              dark: '#1A202C', // Texto Oscuro
               light: '#FFFFFF',
-              surface: '#FFF9F5'
+              surface: '#FFF9F5', // Crema muy suave
             },
             fontFamily: {
-              sans: ['Inter', 'sans-serif'],
+              sans: ['Inter', 'system-ui', 'sans-serif'],
             },
             animation: {
-              'fade-in': 'fadeIn 0.5s ease-out',
-              'slide-up': 'slideUp 0.5s ease-out',
-              'bounce-soft': 'bounceSoft 2s infinite',
+              'fade-in': 'fadeIn 0.3s ease-out',
+              'slide-up': 'slideUp 0.4s ease-out',
             },
             keyframes: {
               fadeIn: {
@@ -33,29 +33,40 @@
               slideUp: {
                 '0%': { transform: 'translateY(20px)', opacity: '0' },
                 '100%': { transform: 'translateY(0)', opacity: '1' },
-              },
-              bounceSoft: {
-                '0%, 100%': { transform: 'translateY(-5%)' },
-                '50%': { transform: 'translateY(0)' },
               }
             }
           }
         }
       }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
       body { 
         font-family: 'Inter', sans-serif; 
-        background-color: #FFF9F5; 
+        background-color: #F3F4F6; 
         color: #1A202C;
         -webkit-tap-highlight-color: transparent;
       }
-      /* Hide scrollbar for clean UI but allow functionality */
+      
+      /* Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1; 
+        border-radius: 10px;
+      }
+      
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       
-      /* Smooth scrolling */
+      .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; }
+
       html { scroll-behavior: smooth; }
     </style>
   <script type="importmap">

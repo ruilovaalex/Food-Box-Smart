@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Button, Input, PageLayout, Card } from '../components/UI';
+import { Button, Input, PageLayout } from '../components/UI';
 
 export const Login: React.FC = () => {
   const { login } = useAuth();
@@ -43,53 +44,80 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <PageLayout className="flex items-center justify-center p-6 bg-gradient-to-br from-orange-50 to-white">
-      <div className="w-full max-w-md animate-slide-up">
-        <div className="text-center mb-8 flex flex-col items-center">
-            {/* LOGO EMPRESARIAL */}
-            <div className="w-48 h-48 mb-6 relative">
-                <img 
+    <div className="flex min-h-screen w-full bg-white overflow-hidden font-sans text-dark">
+      
+      {/* SECCIÓN IZQUIERDA (Visible solo en PC/Tablet) - Visual Branding */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary to-orange-600 relative items-center justify-center text-white overflow-hidden">
+         
+         {/* Elementos decorativos de fondo */}
+         <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/food.png')]"></div>
+         <div className="absolute -top-24 -left-24 w-96 h-96 bg-orange-400 rounded-full mix-blend-overlay filter blur-3xl opacity-50 animate-pulse"></div>
+         <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-yellow-400 rounded-full mix-blend-overlay filter blur-3xl opacity-50"></div>
+
+         <div className="z-10 text-center p-12 max-w-lg">
+            <div className="w-64 h-64 mx-auto mb-8 relative hover:scale-105 transition-transform duration-500">
+                 <img 
                     src="/images/logo.png" 
                     alt="Logo Empresa" 
-                    className="w-full h-full object-contain drop-shadow-xl"
+                    className="w-full h-full object-contain drop-shadow-2xl"
                     onError={(e) => {
-                        // Fallback si la imagen no existe
                         e.currentTarget.style.display = 'none';
                         e.currentTarget.nextElementSibling?.classList.remove('hidden');
                     }}
                 />
-                {/* Fallback visual si no se carga el logo */}
-                <div className="hidden w-full h-full bg-gradient-to-tr from-primary to-orange-400 rounded-3xl flex items-center justify-center shadow-xl shadow-orange-500/20 transform rotate-3">
-                    <span className="text-6xl">🍔</span>
+                <div className="hidden w-full h-full bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border-4 border-white/30">
+                     <span className="text-8xl">🍔</span>
                 </div>
             </div>
             
-            <h1 className="text-2xl font-extrabold text-dark tracking-tight mb-1">Food Box Smart</h1>
-            <p className="text-gray-500 font-medium text-sm">
-                {mode === 'client' ? 'Pide tu comida favorita al instante.' : 'Panel de Administración'}
+            <h1 className="text-5xl font-extrabold tracking-tight mb-4 drop-shadow-md">
+                Food Box <span className="text-yellow-300">Smart</span>
+            </h1>
+            <p className="text-xl text-orange-100 font-medium leading-relaxed">
+                {mode === 'client' 
+                    ? "La forma más rápida y deliciosa de pedir tu comida. Sin filas, directo a tu caja." 
+                    : "Panel de control administrativo. Gestiona pedidos y monitorea cajas en tiempo real."}
             </p>
-        </div>
+         </div>
+      </div>
 
-        <Card className="p-8 backdrop-blur-xl bg-white/90 relative overflow-hidden shadow-2xl border-white/50">
-            {/* Indicador visual del modo */}
-            <div className={`absolute top-0 left-0 w-full h-1.5 ${mode === 'admin' ? 'bg-dark' : 'bg-primary'}`} />
+      {/* SECCIÓN DERECHA - Formulario */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-surface">
+         <div className="w-full max-w-md bg-white p-8 md:p-12 rounded-3xl shadow-xl shadow-orange-500/5 border border-orange-100/50 relative">
+            
+            {/* Logo visible solo en Móvil */}
+            <div className="lg:hidden text-center mb-8">
+                <img src="/images/logo.png" className="w-32 h-32 object-contain mx-auto mb-2" />
+                <h2 className="text-2xl font-black text-dark">Food Box Smart</h2>
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Cabecera del Formulario */}
+            <div className="mb-8">
+                <h3 className="text-3xl font-bold text-dark mb-2">
+                    {mode === 'client' ? '¡Bienvenido!' : 'Acceso Admin'}
+                </h3>
+                <p className="text-gray-400">
+                    {mode === 'client' 
+                        ? 'Ingresa tus datos para comenzar tu pedido.' 
+                        : 'Por favor ingresa tus credenciales.'}
+                </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
                 
                 {mode === 'client' ? (
-                    <div className="animate-fade-in">
+                    <div className="animate-fade-in space-y-4">
                          <Input
                             label="Correo Electrónico"
                             type="email"
-                            placeholder="ejemplo@correo.com"
+                            placeholder="tucorreo@ejemplo.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             error={error}
+                            className="!bg-gray-50 !border-gray-100 focus:!bg-white"
                             autoFocus
+                            icon={<span className="text-gray-400">📧</span>}
                         />
-                         <p className="text-xs text-gray-400 mt-2 ml-1">
-                            Ingresa tu correo para recibir tu comprobante.
-                        </p>
                     </div>
                 ) : (
                     <div className="space-y-4 animate-fade-in">
@@ -100,6 +128,8 @@ export const Login: React.FC = () => {
                             value={adminUser}
                             onChange={(e) => setAdminUser(e.target.value)}
                             autoFocus
+                            className="!bg-gray-50 !border-gray-100 focus:!bg-white"
+                            icon={<span className="text-gray-400">👤</span>}
                         />
                          <Input
                             label="Contraseña"
@@ -108,6 +138,8 @@ export const Login: React.FC = () => {
                             value={adminPass}
                             onChange={(e) => setAdminPass(e.target.value)}
                             error={error}
+                            className="!bg-gray-50 !border-gray-100 focus:!bg-white"
+                            icon={<span className="text-gray-400">🔒</span>}
                         />
                     </div>
                 )}
@@ -116,33 +148,38 @@ export const Login: React.FC = () => {
                     type="submit" 
                     fullWidth 
                     isLoading={loading} 
-                    className={mode === 'admin' ? '!bg-dark hover:!bg-black shadow-gray-500/30' : ''}
+                    className={`text-lg py-4 shadow-xl transition-transform hover:scale-[1.02] ${
+                        mode === 'admin' 
+                        ? '!bg-dark hover:!bg-black shadow-gray-900/20' 
+                        : 'shadow-orange-500/30'
+                    }`}
                 >
-                    {loading ? 'Iniciando...' : mode === 'client' ? 'Ingresar' : 'Entrar'}
+                    {loading ? 'Procesando...' : mode === 'client' ? 'Ingresar' : 'Iniciar Sesión'}
                 </Button>
             </form>
 
-            <div className="mt-6 pt-6 border-t border-gray-100 flex justify-center">
+            <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+                <p className="text-sm text-gray-400 mb-3">
+                    {mode === 'client' ? '¿Eres administrador?' : '¿Quieres realizar un pedido?'}
+                </p>
                 {mode === 'client' ? (
                     <button 
                         onClick={() => { setMode('admin'); setError(''); }}
-                        className="px-4 py-2 rounded-xl text-sm font-bold text-gray-400 hover:text-dark hover:bg-gray-100 transition-all flex items-center gap-2"
+                        className="text-dark font-bold hover:text-primary transition-colors text-sm"
                     >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                        Admin
+                        Ingresar como Admin
                     </button>
                 ) : (
                     <button 
                         onClick={() => { setMode('client'); setError(''); }}
-                        className="px-4 py-2 rounded-xl text-sm font-bold text-primary hover:text-orange-600 hover:bg-orange-50 transition-all flex items-center gap-2"
+                        className="text-primary font-bold hover:text-orange-600 transition-colors text-sm"
                     >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" /></svg>
-                        Volver a Cliente
+                        Volver a modo Cliente
                     </button>
                 )}
             </div>
-        </Card>
+         </div>
       </div>
-    </PageLayout>
+    </div>
   );
 };
