@@ -18,6 +18,7 @@ export const database = {
           return {
               id: d.id || doc.id,
               userId: d.userId || 'Guest',
+              userEmail: d.userEmail || '', // Leemos el email
               items: d.items || [],
               total: typeof d.total === 'number' ? d.total : 0,
               status: d.status || 'pending',
@@ -62,4 +63,3 @@ export const database = {
     await batch.commit();
   }
 };
-    

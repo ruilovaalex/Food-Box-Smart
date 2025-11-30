@@ -1,17 +1,21 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Button, Input, PageLayout } from '../components/UI';
+import { Button, Input } from '../components/UI';
 
 export const Login: React.FC = () => {
-  const { login } = useAuth();
+  const { login, register, loginAnonymously } = useAuth();
   
-  // States
-  const [mode, setMode] = useState<'client' | 'admin'>('client');
+  // Estados de Modo
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  
+  // Campos
   const [email, setEmail] = useState('');
-  const [adminUser, setAdminUser] = useState('');
-  const [adminPass, setAdminPass] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState(''); // Solo para registro cliente
   
+  // UI States
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -20,39 +24,86 @@ export const Login: React.FC = () => {
     setError('');
     setLoading(true);
 
-    // Simulamos un pequeño delay de red
-    setTimeout(() => {
-        if (mode === 'client') {
-            if (!email.trim() || !email.includes('@')) {
-                setError('Por favor ingresa un correo válido.');
-                setLoading(false);
-                return;
+    try {
+        if (isAdminMode) {
+            // LÓGICA ESPECIAL ADMIN:
+            const adminEmail = email.toLowerCase() === 'admin' ? 'admin@foodbox.com' : email;
+            
+            try {
+                // 1. Intentamos iniciar sesión
+                await login(adminEmail, password);
+            } catch (loginErr: any) {
+                // 2. Si falla porque el usuario NO EXISTE, lo creamos automáticamente (Solo la primera vez)
+                // Firebase devuelve 'auth/user-not-found' o 'auth/invalid-credential' (dependiendo de la versión)
+                if (loginErr.code === 'auth/user-not-found' || loginErr.code === 'auth/invalid-credential' || loginErr.code === 'auth/invalid-login-credentials') {
+                    try {
+                        console.log("Admin no encontrado. Intentando registrar automáticamente...");
+                        await register("Administrador", adminEmail, password);
+                        return; // Registro exitoso, el AuthContext manejará la redirección
+                    } catch (regErr: any) {
+                        // Si falla el registro porque ya existe (ej: contraseña incorrecta en el login original),
+                        // lanzamos el error original de login
+                        if (regErr.code === 'auth/email-already-in-use') {
+                            throw loginErr;
+                        }
+                        throw regErr;
+                    }
+                }
+                throw loginErr; // Si es otro error (ej. red), lo lanzamos
             }
-            // Login cliente: solo email
-            login(email, undefined, false);
+
         } else {
-            // Login Admin: Usuario y Contraseña
-            const success = login(adminUser, adminPass, true);
-            if (!success) {
-                setError('Usuario o contraseña incorrectos.');
-                setLoading(false);
-                return;
+            // LÓGICA CLIENTE NORMAL
+            if (isRegistering) {
+                if (!name.trim()) throw new Error("El nombre es obligatorio.");
+                await register(name, email, password);
+            } else {
+                await login(email, password);
             }
         }
-        // El redireccionamiento ocurre en App.tsx al detectar el usuario en el contexto
-    }, 800);
+        // El redireccionamiento es automático gracias a onAuthStateChanged en App.tsx
+    } catch (err: any) {
+        console.error(err);
+        let msg = "Ocurrió un error.";
+        if (err.code === 'auth/invalid-email') msg = "El correo no es válido.";
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/invalid-login-credentials') msg = isAdminMode ? "Contraseña incorrecta o error de credenciales." : "Usuario no encontrado o contraseña incorrecta.";
+        if (err.code === 'auth/wrong-password') msg = "Contraseña incorrecta.";
+        if (err.code === 'auth/email-already-in-use') msg = "Este correo ya está registrado.";
+        if (err.code === 'auth/weak-password') msg = "La contraseña debe tener al menos 6 caracteres.";
+        if (err.code === 'auth/operation-not-allowed') msg = "El acceso como invitado no está habilitado en Firebase.";
+        setError(msg);
+        setLoading(false);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+      setLoading(true);
+      setError('');
+      try {
+          await loginAnonymously();
+      } catch (err: any) {
+          console.error(err);
+          let msg = "Error al entrar como invitado.";
+          if (err.code === 'auth/operation-not-allowed') msg = "Debes habilitar 'Anónimo' en Firebase Authentication.";
+          setError(msg);
+          setLoading(false);
+      }
   };
 
   return (
     <div className="flex min-h-screen w-full bg-white overflow-hidden font-sans text-dark">
       
-      {/* SECCIÓN IZQUIERDA (Visible solo en PC/Tablet) - Visual Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary to-orange-600 relative items-center justify-center text-white overflow-hidden">
+      {/* SECCIÓN IZQUIERDA (PC) - Branding */}
+      <div className={`hidden lg:flex lg:w-1/2 relative items-center justify-center text-white overflow-hidden transition-colors duration-500 ${isAdminMode ? 'bg-dark' : 'bg-gradient-to-br from-primary to-orange-600'}`}>
          
-         {/* Elementos decorativos de fondo */}
+         {/* Elementos decorativos */}
          <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/food.png')]"></div>
-         <div className="absolute -top-24 -left-24 w-96 h-96 bg-orange-400 rounded-full mix-blend-overlay filter blur-3xl opacity-50 animate-pulse"></div>
-         <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-yellow-400 rounded-full mix-blend-overlay filter blur-3xl opacity-50"></div>
+         {!isAdminMode && (
+             <>
+                <div className="absolute -top-24 -left-24 w-96 h-96 bg-orange-400 rounded-full mix-blend-overlay filter blur-3xl opacity-50 animate-pulse"></div>
+                <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-yellow-400 rounded-full mix-blend-overlay filter blur-3xl opacity-50"></div>
+             </>
+         )}
 
          <div className="z-10 text-center p-12 max-w-lg">
             <div className="w-64 h-64 mx-auto mb-8 relative hover:scale-105 transition-transform duration-500">
@@ -71,12 +122,10 @@ export const Login: React.FC = () => {
             </div>
             
             <h1 className="text-5xl font-extrabold tracking-tight mb-4 drop-shadow-md">
-                Food Box <span className="text-yellow-300">Smart</span>
+                Food Box <span className={isAdminMode ? "text-primary" : "text-yellow-300"}>Smart</span>
             </h1>
-            <p className="text-xl text-orange-100 font-medium leading-relaxed">
-                {mode === 'client' 
-                    ? "La forma más rápida y deliciosa de pedir tu comida. Sin filas, directo a tu caja." 
-                    : "Panel de control administrativo. Gestiona pedidos y monitorea cajas en tiempo real."}
+            <p className={`text-xl font-medium leading-relaxed ${isAdminMode ? "text-gray-400" : "text-orange-100"}`}>
+                {isAdminMode ? 'Panel de Control Administrativo' : 'Automatización inteligente para comedores.'}
             </p>
          </div>
       </div>
@@ -91,93 +140,121 @@ export const Login: React.FC = () => {
                 <h2 className="text-2xl font-black text-dark">Food Box Smart</h2>
             </div>
 
+            {/* Selector de Modo (Arriba a la derecha) */}
+            <div className="absolute top-4 right-4">
+                <button 
+                    onClick={() => {
+                        setIsAdminMode(!isAdminMode);
+                        setIsRegistering(false); // Resetear registro al cambiar modo
+                        setError('');
+                        setEmail('');
+                        setPassword('');
+                    }}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all ${
+                        isAdminMode 
+                        ? 'bg-primary text-white shadow-md' 
+                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                    }`}
+                >
+                    {isAdminMode ? '👤 Volver a Cliente' : '🔒 Soy Admin'}
+                </button>
+            </div>
+
             {/* Cabecera del Formulario */}
-            <div className="mb-8">
+            <div className="mb-6 mt-4">
                 <h3 className="text-3xl font-bold text-dark mb-2">
-                    {mode === 'client' ? '¡Bienvenido!' : 'Acceso Admin'}
+                    {isAdminMode ? 'Acceso Admin' : (isRegistering ? 'Crear Cuenta' : 'Bienvenido')}
                 </h3>
                 <p className="text-gray-400">
-                    {mode === 'client' 
-                        ? 'Ingresa tus datos para comenzar tu pedido.' 
-                        : 'Por favor ingresa tus credenciales.'}
+                    {isAdminMode 
+                        ? 'Ingresa tus credenciales de administrador.'
+                        : (isRegistering ? 'Llena tus datos para comenzar.' : 'Ingresa para ordenar tu comida.')}
                 </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
                 
-                {mode === 'client' ? (
-                    <div className="animate-fade-in space-y-4">
-                         <Input
-                            label="Correo Electrónico"
-                            type="email"
-                            placeholder="tucorreo@ejemplo.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            error={error}
-                            className="!bg-gray-50 !border-gray-100 focus:!bg-white"
-                            autoFocus
-                            icon={<span className="text-gray-400">📧</span>}
-                        />
-                    </div>
-                ) : (
-                    <div className="space-y-4 animate-fade-in">
+                {/* Nombre (Solo Registro Cliente) */}
+                {isRegistering && !isAdminMode && (
+                    <div className="animate-fade-in">
                         <Input
-                            label="Usuario"
+                            label="Nombre Completo"
                             type="text"
-                            placeholder="admin"
-                            value={adminUser}
-                            onChange={(e) => setAdminUser(e.target.value)}
-                            autoFocus
+                            placeholder="Ej. Juan Pérez"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
                             className="!bg-gray-50 !border-gray-100 focus:!bg-white"
                             icon={<span className="text-gray-400">👤</span>}
                         />
-                         <Input
-                            label="Contraseña"
-                            type="password"
-                            placeholder="••••••••"
-                            value={adminPass}
-                            onChange={(e) => setAdminPass(e.target.value)}
-                            error={error}
-                            className="!bg-gray-50 !border-gray-100 focus:!bg-white"
-                            icon={<span className="text-gray-400">🔒</span>}
-                        />
                     </div>
                 )}
+
+                {/* Usuario / Email */}
+                <Input
+                    label={isAdminMode ? "Usuario" : "Correo Electrónico"}
+                    type={isAdminMode ? "text" : "email"}
+                    placeholder={isAdminMode ? "admin" : "tucorreo@ejemplo.com"}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="!bg-gray-50 !border-gray-100 focus:!bg-white"
+                    icon={<span className="text-gray-400">{isAdminMode ? '🛡️' : '📧'}</span>}
+                />
+
+                {/* Password */}
+                <Input
+                    label="Contraseña"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    error={error}
+                    className="!bg-gray-50 !border-gray-100 focus:!bg-white"
+                    icon={<span className="text-gray-400">🔒</span>}
+                />
 
                 <Button 
                     type="submit" 
                     fullWidth 
                     isLoading={loading} 
                     className={`text-lg py-4 shadow-xl transition-transform hover:scale-[1.02] ${
-                        mode === 'admin' 
-                        ? '!bg-dark hover:!bg-black shadow-gray-900/20' 
-                        : 'shadow-orange-500/30'
+                        isAdminMode ? 'bg-dark shadow-gray-900/20 hover:bg-black' : 'shadow-orange-500/30'
                     }`}
                 >
-                    {loading ? 'Procesando...' : mode === 'client' ? 'Ingresar' : 'Iniciar Sesión'}
+                    {loading ? 'Procesando...' : isAdminMode ? 'Entrar como Admin' : (isRegistering ? 'Registrarse' : 'Iniciar Sesión')}
                 </Button>
             </form>
 
-            <div className="mt-8 pt-6 border-t border-gray-100 text-center">
-                <p className="text-sm text-gray-400 mb-3">
-                    {mode === 'client' ? '¿Eres administrador?' : '¿Quieres realizar un pedido?'}
-                </p>
-                {mode === 'client' ? (
-                    <button 
-                        onClick={() => { setMode('admin'); setError(''); }}
-                        className="text-dark font-bold hover:text-primary transition-colors text-sm"
+            {/* Opciones Adicionales Cliente */}
+            {!isAdminMode && (
+                <>
+                    <div className="relative my-6">
+                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100"></div></div>
+                        <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-400">O también</span></div>
+                    </div>
+
+                    <Button 
+                        type="button"
+                        variant="secondary"
+                        fullWidth
+                        onClick={handleGuestLogin}
+                        className="py-3 border-dashed border-2 text-gray-500 hover:text-primary hover:border-primary hover:bg-orange-50"
                     >
-                        Ingresar como Admin
-                    </button>
-                ) : (
-                    <button 
-                        onClick={() => { setMode('client'); setError(''); }}
-                        className="text-primary font-bold hover:text-orange-600 transition-colors text-sm"
-                    >
-                        Volver a modo Cliente
-                    </button>
-                )}
-            </div>
+                        👀 Ver menú sin registrarse
+                    </Button>
+
+                    <div className="mt-6 text-center">
+                        <p className="text-sm text-gray-400 mb-2">
+                            {isRegistering ? '¿Ya tienes una cuenta?' : '¿No tienes cuenta?'}
+                        </p>
+                        <button 
+                            onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
+                            className="text-primary font-bold hover:text-orange-600 transition-colors text-sm"
+                        >
+                            {isRegistering ? 'Iniciar Sesión' : 'Crear Cuenta Nueva'}
+                        </button>
+                    </div>
+                </>
+            )}
          </div>
       </div>
     </div>

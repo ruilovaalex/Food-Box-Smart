@@ -17,6 +17,7 @@ export type OrderStatus = 'pending' | 'paid' | 'ready' | 'delivered' | 'cancelle
 export interface Order {
   id: string;
   userId: string;
+  userEmail?: string; // Nuevo campo para guardar el correo visible
   items: CartItem[];
   total: number;
   status: OrderStatus;

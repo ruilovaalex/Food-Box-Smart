@@ -3,19 +3,22 @@ import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { useMqtt } from '../context/MqttContext';
 import { useAuth } from '../context/AuthContext';
-import { Navbar, Card, Button, QuantityControl, PageLayout, Input } from '../components/UI';
+import { Navbar, Button, QuantityControl, PageLayout, Input } from '../components/UI';
 import { useNavigate } from 'react-router-dom';
 import { Order } from '../types';
 
 export const Cart: React.FC = () => {
   const { items, total, decreaseQuantity, addToCart, removeFromCart, clearCart } = useCart();
   const { createOrder } = useMqtt();
-  const { user } = useAuth();
+  const { user, logout } = useAuth(); // Agregamos logout aquí
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Detectar si es invitado
+  const isGuest = user?.id.startsWith('guest-');
+
   // Form States
-  const [name, setName] = useState(user?.name || '');
+  const [name, setName] = useState(user?.name && !isGuest ? user.name : '');
   const [phone, setPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
   
@@ -70,20 +73,22 @@ export const Cart: React.FC = () => {
 
     setIsProcessing(true);
     // Simulate payment processing delay with randomness
-    // REDUCIDO: De 2000ms a 500ms para mayor fluidez
     setTimeout(() => {
         const orderCode = Math.floor(1000 + Math.random() * 9000).toString();
+        // Generar un ID corto y legible (Ej: ORD-48291)
+        const shortId = `ORD-${Math.floor(10000 + Math.random() * 90000)}`;
         
         const newOrder: Order = {
-            id: Date.now().toString(),
+            id: shortId,
             userId: user?.id || 'guest',
+            userEmail: user?.email || 'Invitado', // Guardamos el email real
             items: [...items],
             total: total,
             status: 'pending',
             code: orderCode,
             createdAt: Date.now(),
             customerDetails: {
-                name,
+                name, // Este es el nombre que se mostrará
                 phone,
                 paymentMethod
             }
@@ -153,93 +158,103 @@ export const Cart: React.FC = () => {
             ))}
         </div>
 
-        {/* Checkout Form */}
-        <div className="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
-            <h3 className="font-bold text-dark text-lg mb-4 flex items-center gap-2">
-                <span>📝</span> Datos de Pago
-            </h3>
-            <div className="space-y-4">
-                <Input 
-                    label="Nombre Completo"
-                    placeholder="Ej. Juan Pérez"
-                    name="name"
-                    autoComplete="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    error={formErrors.name}
-                />
-                <Input 
-                    label="Número de Teléfono"
-                    type="tel"
-                    placeholder="099..."
-                    name="phone"
-                    autoComplete="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    error={formErrors.phone}
-                />
-                
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 ml-1">Método de Pago</label>
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                        <button 
-                            className={`p-3 rounded-2xl border font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                                paymentMethod === 'cash' 
-                                ? 'bg-green-50 border-green-500 text-green-700 shadow-sm' 
-                                : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
-                            }`}
-                            onClick={() => setPaymentMethod('cash')}
-                        >
-                            <span>💵</span> Efectivo
-                        </button>
-                        <button 
-                            className={`p-3 rounded-2xl border font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                                paymentMethod === 'card' 
-                                ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm' 
-                                : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
-                            }`}
-                            onClick={() => setPaymentMethod('card')}
-                        >
-                            <span>💳</span> Tarjeta
-                        </button>
-                    </div>
-
-                    {/* Card Input Fields - Conditional Rendering */}
-                    {paymentMethod === 'card' && (
-                        <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-4 animate-fade-in">
-                            <Input 
-                                label="Número de Tarjeta"
-                                placeholder="0000 0000 0000 0000"
-                                value={cardNumber}
-                                onChange={handleCardNumberChange}
-                                error={formErrors.cardNumber}
-                                maxLength={19}
-                                icon={<span className="text-gray-400">💳</span>}
-                            />
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input 
-                                    label="Expiración"
-                                    placeholder="MM/YY"
-                                    value={cardExpiry}
-                                    onChange={handleExpiryChange}
-                                    error={formErrors.cardExpiry}
-                                    maxLength={5}
-                                />
-                                <Input 
-                                    label="CVV"
-                                    placeholder="123"
-                                    type="password"
-                                    maxLength={3}
-                                    value={cardCvv}
-                                    onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
-                                    error={formErrors.cardCvv}
-                                />
-                            </div>
+        {/* Checkout Form - Solo visible si NO es invitado */}
+        {!isGuest ? (
+            <div className="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
+                <h3 className="font-bold text-dark text-lg mb-4 flex items-center gap-2">
+                    <span>📝</span> Datos de Pago
+                </h3>
+                <div className="space-y-4">
+                    <Input 
+                        label="Nombre Completo"
+                        placeholder="Ej. Juan Pérez"
+                        name="name"
+                        autoComplete="name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        error={formErrors.name}
+                    />
+                    <Input 
+                        label="Número de Teléfono"
+                        type="tel"
+                        placeholder="099..."
+                        name="phone"
+                        autoComplete="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        error={formErrors.phone}
+                    />
+                    
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2 ml-1">Método de Pago</label>
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                            <button 
+                                className={`p-3 rounded-2xl border font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                                    paymentMethod === 'cash' 
+                                    ? 'bg-green-50 border-green-500 text-green-700 shadow-sm' 
+                                    : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
+                                }`}
+                                onClick={() => setPaymentMethod('cash')}
+                            >
+                                <span>💵</span> Efectivo
+                            </button>
+                            <button 
+                                className={`p-3 rounded-2xl border font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                                    paymentMethod === 'card' 
+                                    ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm' 
+                                    : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
+                                }`}
+                                onClick={() => setPaymentMethod('card')}
+                            >
+                                <span>💳</span> Tarjeta
+                            </button>
                         </div>
-                    )}
+
+                        {/* Card Input Fields - Conditional Rendering */}
+                        {paymentMethod === 'card' && (
+                            <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-4 animate-fade-in">
+                                <Input 
+                                    label="Número de Tarjeta"
+                                    placeholder="0000 0000 0000 0000"
+                                    value={cardNumber}
+                                    onChange={handleCardNumberChange}
+                                    error={formErrors.cardNumber}
+                                    maxLength={19}
+                                    icon={<span className="text-gray-400">💳</span>}
+                                />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Input 
+                                        label="Expiración"
+                                        placeholder="MM/YY"
+                                        value={cardExpiry}
+                                        onChange={handleExpiryChange}
+                                        error={formErrors.cardExpiry}
+                                        maxLength={5}
+                                    />
+                                    <Input 
+                                        label="CVV"
+                                        placeholder="123"
+                                        type="password"
+                                        maxLength={3}
+                                        value={cardCvv}
+                                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
+                                        error={formErrors.cardCvv}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
+        ) : (
+            <div className="bg-orange-50 p-6 rounded-3xl border border-orange-100 text-center">
+                <span className="text-4xl mb-2 block">🔒</span>
+                <h3 className="font-bold text-dark text-lg mb-2">Modo Visita</h3>
+                <p className="text-gray-600 text-sm mb-4">
+                    Estás navegando como invitado. Para confirmar tu pedido y pagar, necesitas crear una cuenta o iniciar sesión.
+                </p>
+            </div>
+        )}
 
         {/* Receipt Style Summary */}
         <div className="bg-white p-6 rounded-3xl shadow-xl shadow-gray-200/50 relative overflow-hidden">
@@ -267,15 +282,29 @@ export const Cart: React.FC = () => {
 
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg p-5 border-t border-gray-100 z-40 rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
           <div className="max-w-2xl mx-auto">
-            <Button 
-                onClick={handleCheckout} 
-                disabled={isProcessing} 
-                isLoading={isProcessing}
-                fullWidth 
-                className="text-lg py-4 shadow-xl shadow-orange-500/20"
-            >
-                {isProcessing ? 'Procesando...' : 'Confirmar Pedido'}
-            </Button>
+            {!isGuest ? (
+                <Button 
+                    onClick={handleCheckout} 
+                    disabled={isProcessing} 
+                    isLoading={isProcessing}
+                    fullWidth 
+                    className="text-lg py-4 shadow-xl shadow-orange-500/20"
+                >
+                    {isProcessing ? 'Procesando...' : 'Confirmar Pedido'}
+                </Button>
+            ) : (
+                <Button 
+                    onClick={() => {
+                        logout(); // Cerramos la sesión de invitado
+                        navigate('/'); // Redirigimos al login
+                    }} 
+                    fullWidth 
+                    variant="secondary"
+                    className="text-lg py-4 border-primary text-primary"
+                >
+                    🔒 Inicia sesión para ordenar
+                </Button>
+            )}
           </div>
       </div>
     </PageLayout>

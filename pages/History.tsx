@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useMqtt } from '../context/MqttContext';
 import { useAuth } from '../context/AuthContext';
@@ -30,10 +31,10 @@ export const History: React.FC = () => {
                             className="p-5 flex justify-between items-center group animate-slide-up"
                         >
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold shadow-sm ${
+                                <div className={`w-14 h-12 rounded-2xl flex items-center justify-center text-xs font-bold shadow-sm ${
                                     order.status === 'delivered' ? 'bg-gray-100 text-gray-400' : 'bg-orange-100 text-primary'
                                 }`}>
-                                    #{order.id.slice(-4)}
+                                    {order.id}
                                 </div>
                                 <div>
                                     <p className="text-xs text-gray-400 font-medium mb-0.5">

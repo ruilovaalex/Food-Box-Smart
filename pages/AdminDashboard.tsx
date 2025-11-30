@@ -39,8 +39,8 @@ interface OrderRowCardProps {
 }
 
 const OrderRowCard: React.FC<OrderRowCardProps> = ({ order, onViewDetails }) => {
-    // Safe access to user ID to prevent crashes
-    const displayName = order.userId ? order.userId.split('@')[0] : 'Invitado';
+    // Usar el nombre del cliente ingresado en checkout, o el ID si no hay
+    const displayName = order.customerDetails?.name || order.userId;
     
     return (
         <Card className="p-5 mb-4 border border-gray-100 shadow-sm hover:shadow-md transition-all">
@@ -110,7 +110,10 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) =
     if (!order) return null;
     const hasHot = order.items ? order.items.some(i => i.type === 'hot') : false;
     const hasCold = order.items ? order.items.some(i => i.type === 'cold') : false;
-    const displayName = order.userId ? order.userId.split('@')[0] : 'Invitado';
+    
+    // Corregido: Mostrar nombre real y email real
+    const displayName = order.customerDetails?.name || 'Cliente';
+    const displayEmail = order.userEmail || order.userId || 'No registrado';
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
@@ -136,7 +139,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) =
                             <h4 className="text-sm font-bold text-primary mb-3">Cliente</h4>
                             <div className="bg-gray-50 p-4 rounded-xl space-y-2 text-sm">
                                 <p><span className="font-bold text-dark">Nombre:</span> {displayName}</p>
-                                <p><span className="font-bold text-dark">Email:</span> {order.userId || 'No registrado'}</p>
+                                <p><span className="font-bold text-dark">Email:</span> {displayEmail}</p>
                                 <p><span className="font-bold text-dark">ID Orden:</span> #{order.id}</p>
                             </div>
                         </div>
@@ -221,12 +224,14 @@ export const AdminDashboard: React.FC = () => {
     const filteredOrders = orders.filter(o => {
         const id = o.id || '';
         const code = o.code || '';
-        const userId = o.userId || '';
+        const userName = o.customerDetails?.name || '';
+        const userEmail = o.userEmail || '';
         const term = searchTerm.toLowerCase();
         
-        return id.includes(term) || 
+        return id.toLowerCase().includes(term) || 
                code.includes(term) ||
-               userId.toLowerCase().includes(term);
+               userName.toLowerCase().includes(term) ||
+               userEmail.toLowerCase().includes(term);
     }).sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
 
 
@@ -436,7 +441,7 @@ export const AdminDashboard: React.FC = () => {
                                         }`}
                                     >
                                         <div className="flex justify-between items-center">
-                                            <span className="font-bold">#{order.id.slice(-4)}</span>
+                                            <span className="font-bold">#{order.id}</span>
                                             <span className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded text-xs font-bold">Code: {order.code}</span>
                                         </div>
                                     </div>
@@ -460,7 +465,7 @@ export const AdminDashboard: React.FC = () => {
                                     <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700">
                                         <label className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1 block">ID Destino</label>
                                         <div className="font-mono text-2xl text-primary font-bold">
-                                            {selectedOrderIdForSim ? `#${selectedOrderIdForSim.slice(-4)}` : '---'}
+                                            {selectedOrderIdForSim ? `#${selectedOrderIdForSim}` : '---'}
                                         </div>
                                     </div>
 
@@ -509,4 +514,3 @@ export const AdminDashboard: React.FC = () => {
         </PageLayout>
     );
 };
-    
