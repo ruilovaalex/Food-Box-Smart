@@ -35,6 +35,16 @@ export const Cart: React.FC = () => {
       cardCvv?: string
     }>({});
 
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>, type: string) => {
+    const target = e.currentTarget;
+    target.onerror = null;
+    if (type === 'hot') {
+        target.src = "https://cdn-icons-png.flaticon.com/512/3075/3075977.png";
+    } else {
+        target.src = "https://cdn-icons-png.flaticon.com/512/938/938063.png";
+    }
+  };
+
   if (items.length === 0) {
     return (
       <PageLayout className="bg-white">
@@ -138,7 +148,12 @@ export const Cart: React.FC = () => {
                 className="bg-white p-3 rounded-2xl flex items-center gap-4 shadow-sm border border-gray-50 animate-slide-up"
                 style={{ animationDelay: `${index * 50}ms` }}
             >
-                <img src={item.image} alt={item.name} className="w-20 h-20 rounded-xl object-cover shadow-sm" />
+                <img 
+                    src={item.image} 
+                    alt={item.name} 
+                    onError={(e) => handleImageError(e, item.type)}
+                    className="w-20 h-20 rounded-xl object-cover shadow-sm" 
+                />
                 <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-dark truncate">{item.name}</h4>
                     <p className="text-sm text-gray-400 mb-2 font-medium">{item.type === 'hot' ? '🔥 Caliente' : '❄️ Frío'}</p>

@@ -30,6 +30,18 @@ export const Menu: React.FC = () => {
       setTimeout(() => setAddedNotification(null), 2000);
   };
 
+  // Fallback images in case local upload fails
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>, type: string) => {
+      const target = e.currentTarget;
+      target.onerror = null; // Prevent infinite loop
+      // Fallback icons from CDN
+      if (type === 'hot') {
+          target.src = "https://cdn-icons-png.flaticon.com/512/3075/3075977.png"; // Burger icon
+      } else {
+          target.src = "https://cdn-icons-png.flaticon.com/512/938/938063.png"; // Ice cream icon
+      }
+  };
+
   return (
     <PageLayout className="bg-[#F8F9FD]">
       
@@ -115,6 +127,7 @@ export const Menu: React.FC = () => {
                     <img 
                         src={product.image} 
                         alt={product.name} 
+                        onError={(e) => handleImageError(e, product.type)}
                         className="w-40 h-40 object-contain drop-shadow-xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 relative z-10" 
                     />
                     <div className="absolute top-4 left-4 z-20">
