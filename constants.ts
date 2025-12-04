@@ -1,7 +1,5 @@
-import { Product } from './types';
 
-// NOTA: Asegúrate de guardar tus imágenes en la carpeta 'public/images/' de tu proyecto.
-// Ejemplo: public/images/hamburguesa.png
+import { Product } from './types';
 
 export const PRODUCTS: Product[] = [
   {
@@ -9,29 +7,29 @@ export const PRODUCTS: Product[] = [
     name: "Hamburguesa + Papas",
     price: 8.50,
     type: 'hot',
-    // Cambia esto por el nombre real de tu archivo
-    image: "/images/hamburguesa.png" 
+    // Usamos una imagen online para asegurar que se vea en el despliegue
+    image: "https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?q=80&w=800&auto=format&fit=crop" 
   },
   {
     id: 2,
     name: "Ramen",
     price: 6.00,
     type: 'hot',
-    image: "/images/ramen.png"
+    image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?q=80&w=800&auto=format&fit=crop"
   },
   {
     id: 3,
     name: "Helado de Cono",
     price: 1.00,
     type: 'cold',
-    image: "/images/helado.png"
+    image: "https://images.unsplash.com/photo-1549395156-e8c1e9f43ad7?q=80&w=800&auto=format&fit=crop"
   },
   {
     id: 4,
     name: "Té Frío",
     price: 2.00,
     type: 'cold',
-    image: "/images/te.png"
+    image: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?q=80&w=800&auto=format&fit=crop"
   }
 ];
 
