@@ -85,6 +85,16 @@ export const Menu: React.FC = () => {
                 ¿Qué se te antoja <br/> <span className="opacity-80 font-normal">comer hoy?</span>
             </h2>
         </div>
+        
+        {/* GIF Calavera - Visible solo en PC, alineado a la derecha */}
+        <div className="absolute bottom-4 right-10 z-20 hidden md:block animate-bounce-soft">
+            <img 
+                src="/images/calavera.gif" 
+                alt="Fun" 
+                className="w-32 h-32 object-contain opacity-90 drop-shadow-lg mix-blend-screen"
+                onError={(e) => e.currentTarget.style.display = 'none'}
+            />
+        </div>
       </div>
 
       {/* --- CATEGORY TABS (Floating) --- */}
@@ -119,24 +129,25 @@ export const Menu: React.FC = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
             {filteredProducts.map(product => (
-            <Card key={product.id} className="flex flex-col h-full group !rounded-[2rem] border-0 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.05)]">
-                <div className="relative h-56 p-6 bg-gradient-to-br from-gray-50 to-white flex items-center justify-center overflow-hidden">
-                    {/* Background blob for product */}
-                    <div className="absolute w-40 h-40 bg-orange-100 rounded-full blur-3xl opacity-0 group-hover:opacity-60 transition-opacity duration-500"></div>
+            <Card key={product.id} className="flex flex-col h-full group !rounded-[2rem] border-0 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.05)] overflow-hidden">
+                <div className="relative h-64 p-4 bg-white flex items-center justify-center overflow-hidden">
+                    {/* Background blob for product hover effect */}
+                    <div className="absolute w-full h-full bg-orange-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                     
+                    {/* IMAGEN DE PRODUCTO MEJORADA: object-cover para llenar el cuadro + redondeado */}
                     <img 
                         src={product.image} 
                         alt={product.name} 
                         onError={(e) => handleImageError(e, product.type)}
-                        className="w-40 h-40 object-contain drop-shadow-xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 relative z-10" 
+                        className="w-full h-full object-cover rounded-2xl shadow-sm transition-transform duration-700 group-hover:scale-105 relative z-10" 
                     />
-                    <div className="absolute top-4 left-4 z-20">
-                        <Badge type={product.type} className="shadow-sm backdrop-blur-md bg-white/90" />
+                    
+                    <div className="absolute top-6 left-6 z-20">
+                        <Badge type={product.type} className="shadow-lg backdrop-blur-md bg-white/95" />
                     </div>
                 </div>
                 
                 <div className="p-6 flex-1 flex flex-col relative bg-white">
-                {/* Curved Connector attempt visually */}
                 <div className="flex justify-between items-start mb-2">
                     <h3 className="text-xl font-bold text-dark leading-tight">{product.name}</h3>
                     <span className="text-lg font-black text-primary bg-orange-50 px-3 py-1 rounded-lg">
