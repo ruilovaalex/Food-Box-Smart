@@ -6,7 +6,7 @@ import { Card, Button, PageLayout, Badge, Input } from '../components/UI';
 import { useNavigate } from 'react-router-dom';
 import { Order } from '../types';
 
-type TabView = 'dashboard' | 'history' | 'simulator';
+type TabView = 'dashboard' | 'history' | 'simulator' | 'sensors';
 
 // --- Helper Components ---
 
@@ -161,7 +161,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) =
 }
 
 export const AdminDashboard: React.FC = () => {
-    const { orders, simulateBoxKeypadEntry, resetDatabase } = useMqtt();
+    const { orders, simulateBoxKeypadEntry, resetDatabase, realTemps } = useMqtt();
     const { logout, user } = useAuth();
     const navigate = useNavigate();
     
@@ -261,16 +261,17 @@ export const AdminDashboard: React.FC = () => {
 
             {/* --- NAVIGATION TABS --- */}
             <div className="max-w-7xl mx-auto px-6 -mt-16 relative z-20 mb-10">
-                <div className="bg-white p-2 rounded-2xl shadow-xl shadow-gray-900/5 inline-flex gap-2">
+                <div className="bg-white p-2 rounded-2xl shadow-xl shadow-gray-900/5 inline-flex gap-2 overflow-x-auto">
                     {[
                         { id: 'dashboard', label: 'Resumen', icon: '📊' },
                         { id: 'history', label: 'Historial', icon: '📜' },
                         { id: 'simulator', label: 'Simulador IoT', icon: '🎛️' },
+                        { id: 'sensors', label: 'Sensores', icon: '🌡️' },
                     ].map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setCurrentTab(tab.id as TabView)}
-                            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
+                            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 whitespace-nowrap ${
                                 currentTab === tab.id 
                                 ? 'bg-dark text-white shadow-lg shadow-gray-900/20 scale-105' 
                                 : 'text-gray-400 hover:bg-gray-50 hover:text-dark'
@@ -473,6 +474,59 @@ export const AdminDashboard: React.FC = () => {
                             >
                                 <span>🗑️</span> Resetear Base de Datos
                             </button>
+                        </div>
+                    </div>
+                )}
+                
+                {/* 4. SENSORS VIEW */}
+                {currentTab === 'sensors' && (
+                    <div className="animate-fade-in grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mt-8">
+                        {/* Hot Sensor Card */}
+                        <div className="bg-white rounded-[3rem] p-8 shadow-xl border border-red-100 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 transition-all group-hover:bg-red-500/10"></div>
+                            
+                            <div className="relative z-10 flex flex-col items-center text-center">
+                                <div className="w-20 h-20 rounded-full bg-red-50 text-red-500 flex items-center justify-center text-4xl mb-6 shadow-sm animate-pulse">
+                                    🔥
+                                </div>
+                                <h3 className="text-gray-400 font-bold uppercase tracking-widest text-sm mb-2">Zona Caliente</h3>
+                                <div className="text-8xl font-black text-red-600 tracking-tighter mb-4 tabular-nums">
+                                    {realTemps.hot}<span className="text-4xl align-top text-red-400">°C</span>
+                                </div>
+                                <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden mb-2">
+                                     <div 
+                                        className="h-full bg-gradient-to-r from-orange-400 to-red-600 rounded-full transition-all duration-1000"
+                                        style={{ width: `${Math.min(Math.max(realTemps.hot, 0), 100)}%` }}
+                                     ></div>
+                                </div>
+                                <p className="text-sm text-gray-400">Rango ideal: 60°C - 75°C</p>
+                            </div>
+                        </div>
+
+                        {/* Cold Sensor Card */}
+                        <div className="bg-white rounded-[3rem] p-8 shadow-xl border border-cyan-100 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 transition-all group-hover:bg-cyan-500/10"></div>
+                            
+                            <div className="relative z-10 flex flex-col items-center text-center">
+                                <div className="w-20 h-20 rounded-full bg-cyan-50 text-cyan-500 flex items-center justify-center text-4xl mb-6 shadow-sm">
+                                    ❄️
+                                </div>
+                                <h3 className="text-gray-400 font-bold uppercase tracking-widest text-sm mb-2">Zona Fría</h3>
+                                <div className="text-8xl font-black text-cyan-600 tracking-tighter mb-4 tabular-nums">
+                                    {realTemps.cold}<span className="text-4xl align-top text-cyan-400">°C</span>
+                                </div>
+                                 <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden mb-2">
+                                     <div 
+                                        className="h-full bg-gradient-to-r from-blue-400 to-cyan-500 rounded-full transition-all duration-1000"
+                                        style={{ width: `${Math.min(Math.max(realTemps.cold * 3, 0), 100)}%` }}
+                                     ></div>
+                                </div>
+                                <p className="text-sm text-gray-400">Rango ideal: 2°C - 8°C</p>
+                            </div>
+                        </div>
+                        
+                        <div className="col-span-1 md:col-span-2 text-center mt-8 text-gray-400 text-sm">
+                            <p>Datos actualizados en tiempo real desde sensores IoT.</p>
                         </div>
                     </div>
                 )}
