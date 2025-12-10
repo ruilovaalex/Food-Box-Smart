@@ -515,7 +515,11 @@ export const AdminDashboard: React.FC = () => {
                                         src="/images/logo.png" 
                                         alt="Food Box Logo" 
                                         className="w-full h-full object-contain drop-shadow-md"
-                                        onError={(e) => {e.currentTarget.style.display='none'; e.currentTarget.parentElement!.innerText = '📦';}} 
+                                        onError={(e) => {
+                                            // Fallback Seguro
+                                            e.currentTarget.onerror = null;
+                                            e.currentTarget.src = 'https://cdn-icons-png.flaticon.com/512/7541/7541258.png';
+                                        }} 
                                     />
                                 </div>
                                 <h2 className="text-4xl md:text-5xl font-black text-dark tracking-tight mb-2">
