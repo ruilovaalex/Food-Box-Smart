@@ -83,10 +83,9 @@ export const Login: React.FC = () => {
   return (
     <div className={`min-h-screen w-full flex items-center justify-center p-4 lg:p-8 relative overflow-hidden transition-colors duration-500 ${isAdminMode ? 'bg-slate-900' : 'bg-[#FFF9F5]'}`}>
       
-      {/* --- BACKGROUND PATTERN (FOOD) --- */}
+      {/* --- MAIN PAGE BACKGROUND PATTERN (FOOD) --- */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
-          {/* Aumentamos opacidad y cantidad de elementos */}
-          <div className={`grid grid-cols-6 md:grid-cols-8 gap-8 md:gap-16 transform -rotate-12 scale-110 transition-opacity duration-500 ${isAdminMode ? 'opacity-[0.07]' : 'opacity-20 grayscale-[20%]'}`}>
+          <div className={`grid grid-cols-6 md:grid-cols-8 gap-8 md:gap-16 transform -rotate-12 scale-110 transition-opacity duration-500 ${isAdminMode ? 'opacity-[0.03]' : 'opacity-20 grayscale-[20%]'}`}>
               {Array.from({ length: 80 }).map((_, i) => (
                   <div key={i} className="text-4xl md:text-6xl animate-pulse" style={{ animationDuration: `${3 + Math.random() * 4}s` }}>
                       {['🍔', '🍕', '🍟', '🌭', '🌮', '🍦', '🍩', '🥤'][i % 8]}
@@ -98,46 +97,62 @@ export const Login: React.FC = () => {
       {/* --- MAIN CARD --- */}
       <div className="w-full max-w-5xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10 min-h-[600px] animate-fade-in border border-white/50">
         
-        {/* LEFT SIDE: BRANDING (Naranja Sólido) */}
-        {/* Mobile: Menos padding (p-8), Desktop: Más padding (p-14) */}
+        {/* LEFT SIDE: BRANDING (Orange/Dark Section) */}
         <div className={`md:w-[45%] p-8 lg:p-14 flex flex-col items-center justify-center relative overflow-hidden text-center transition-colors duration-500 ${isAdminMode ? 'bg-slate-800' : 'bg-[#FF8A2B]'}`}>
              
-             {/* Decorative Background Elements on Orange Card */}
-             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/10 to-transparent opacity-50"></div>
-             <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/20 rounded-full blur-3xl"></div>
-             <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black/10 to-transparent"></div>
+             {/* --- INNER CARD PATTERN (Nuevo Patrón dentro del naranja) --- */}
+             <div className="absolute inset-0 pointer-events-none overflow-hidden select-none opacity-10">
+                <div className="grid grid-cols-4 gap-8 transform rotate-12 scale-125">
+                    {Array.from({ length: 40 }).map((_, i) => (
+                        <div key={i} className="text-5xl text-white">
+                            {['🍔', '🍟', '🥤', '🍕'][i % 4]}
+                        </div>
+                    ))}
+                </div>
+             </div>
 
-             {/* 1. LOGO - Responsive Size */}
-             {/* Mobile: w-32 (pequeño), Desktop: w-64/w-80 (grande) */}
+             {/* Decorative Overlays */}
+             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/10 to-transparent opacity-50 z-0"></div>
+             <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/20 rounded-full blur-3xl z-0"></div>
+             <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-black/20 to-transparent z-0"></div>
+
+             {/* 1. LOGO - Responsive Size & Fallback */}
              <div className="relative z-10 mb-4 md:mb-8 transform hover:scale-105 transition-transform duration-500 group cursor-pointer">
                 <div className="absolute inset-0 bg-white/30 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <img 
                     src="/images/logo.png" 
                     alt="Food Box Logo" 
-                    className="w-32 h-32 md:w-64 md:h-64 lg:w-80 lg:h-80 object-contain drop-shadow-2xl relative z-10" 
-                    onError={(e) => {e.currentTarget.style.display='none'}}
+                    className="w-32 h-32 md:w-56 md:h-56 lg:w-72 lg:h-72 object-contain drop-shadow-2xl relative z-10" 
+                    onError={(e) => {
+                        // Fallback si la imagen local no carga en Vercel
+                        e.currentTarget.onerror = null; // Prevenir loop
+                        e.currentTarget.src = 'https://cdn-icons-png.flaticon.com/512/7541/7541258.png'; // Icono genérico de Food Box
+                    }}
                 />
              </div>
              
-             {/* Textos - Ajustados para móvil */}
-             <h1 className="relative z-10 text-3xl md:text-4xl lg:text-5xl font-black text-white mb-2 tracking-tight drop-shadow-md">
+             {/* Textos */}
+             <h1 className="relative z-10 text-3xl md:text-4xl lg:text-5xl font-black text-white mb-2 tracking-tight drop-shadow-lg">
                 Food Box
              </h1>
-             <p className="relative z-10 text-white/90 text-sm md:text-lg font-medium max-w-[200px] mx-auto leading-relaxed">
+             <p className="relative z-10 text-white/90 text-sm md:text-lg font-medium max-w-[200px] mx-auto leading-relaxed drop-shadow-md">
                 {isAdminMode ? 'Panel de Administración' : 'Tu comida favorita, sin filas.'}
              </p>
 
-             {/* 2. CALAVERA GIF - Responsive Position & Size */}
+             {/* 2. CALAVERA GIF - Fallback included */}
              <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-20 opacity-90 hover:opacity-100 transition-opacity animate-bounce-soft">
                 <img 
                     src="/images/calavera.gif" 
                     alt="Fun" 
-                    className="w-20 h-20 md:w-32 md:h-32 lg:w-44 lg:h-44 object-contain drop-shadow-lg mix-blend-screen"
-                    onError={(e) => e.currentTarget.style.display = 'none'}
+                    className="w-20 h-20 md:w-28 md:h-28 lg:w-36 lg:h-36 object-contain drop-shadow-lg mix-blend-screen"
+                    onError={(e) => {
+                        // Si falla el gif local, ocultamos o mostramos un backup online
+                         e.currentTarget.style.display = 'none';
+                    }}
                 />
              </div>
 
-             <div className="absolute bottom-4 left-6 text-[10px] text-white/50 font-bold uppercase tracking-widest hidden md:block">
+             <div className="absolute bottom-4 left-6 text-[10px] text-white/50 font-bold uppercase tracking-widest hidden md:block z-10">
                  v1.0 Smart Dining
              </div>
         </div>

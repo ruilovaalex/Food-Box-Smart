@@ -55,6 +55,10 @@ const OrderRowCard: React.FC<OrderRowCardProps> = ({ order, onViewDetails }) => 
                     <div>
                         <h4 className="font-bold text-dark text-sm">{displayName}</h4>
                         <p className="text-xs text-gray-400 font-mono">{order.id}</p>
+                        <p className="text-[10px] text-gray-400 mt-1 font-medium flex items-center gap-1">
+                           <span>📅</span>
+                           {new Date(order.createdAt).toLocaleDateString()} • {new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </p>
                     </div>
                 </div>
                 <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
@@ -117,6 +121,11 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) =
                     <div className="bg-white rounded-[2rem] p-6 shadow-lg mb-6 text-center">
                          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Código de Retiro</p>
                          <h2 className="text-6xl font-black text-primary font-mono tracking-widest mb-2">{order.code}</h2>
+                         
+                         <p className="text-xs text-gray-500 mb-3 font-medium">
+                            {new Date(order.createdAt).toLocaleDateString()} • {new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                         </p>
+
                          <div className={`inline-block px-3 py-1 rounded-lg text-xs font-bold ${order.status === 'ready' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}`}>
                             {order.status === 'ready' ? 'Esperando retiro' : order.status}
                          </div>
@@ -480,53 +489,97 @@ export const AdminDashboard: React.FC = () => {
                 
                 {/* 4. SENSORS VIEW */}
                 {currentTab === 'sensors' && (
-                    <div className="animate-fade-in grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mt-8">
-                        {/* Hot Sensor Card */}
-                        <div className="bg-white rounded-[3rem] p-8 shadow-xl border border-red-100 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 transition-all group-hover:bg-red-500/10"></div>
-                            
-                            <div className="relative z-10 flex flex-col items-center text-center">
-                                <div className="w-20 h-20 rounded-full bg-red-50 text-red-500 flex items-center justify-center text-4xl mb-6 shadow-sm animate-pulse">
-                                    🔥
-                                </div>
-                                <h3 className="text-gray-400 font-bold uppercase tracking-widest text-sm mb-2">Zona Caliente</h3>
-                                <div className="text-8xl font-black text-red-600 tracking-tighter mb-4 tabular-nums">
-                                    {realTemps.hot}<span className="text-4xl align-top text-red-400">°C</span>
-                                </div>
-                                <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden mb-2">
-                                     <div 
-                                        className="h-full bg-gradient-to-r from-orange-400 to-red-600 rounded-full transition-all duration-1000"
-                                        style={{ width: `${Math.min(Math.max(realTemps.hot, 0), 100)}%` }}
-                                     ></div>
-                                </div>
-                                <p className="text-sm text-gray-400">Rango ideal: 60°C - 75°C</p>
+                    <div className="relative overflow-hidden bg-white rounded-[3rem] border border-gray-100 shadow-2xl min-h-[70vh] flex flex-col items-center justify-center p-8 lg:p-12 animate-fade-in">
+                        
+                        {/* BACKGROUND PATTERN */}
+                        <div className="absolute inset-0 pointer-events-none opacity-[0.03] select-none overflow-hidden">
+                             <div className="grid grid-cols-6 md:grid-cols-8 gap-8 md:gap-16 transform -rotate-12 scale-110">
+                                {Array.from({ length: 60 }).map((_, i) => (
+                                    <div key={i} className="text-4xl md:text-6xl">
+                                        {['🍔', '🍕', '🍟', '🌭', '🌮', '🍦', '🍩', '🥤'][i % 8]}
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
-                        {/* Cold Sensor Card */}
-                        <div className="bg-white rounded-[3rem] p-8 shadow-xl border border-cyan-100 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 transition-all group-hover:bg-cyan-500/10"></div>
+                        {/* DECORATIVE GRADIENTS */}
+                        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-white/50 to-white/80 pointer-events-none z-0"></div>
+
+                        {/* CONTENT WRAPPER */}
+                        <div className="relative z-10 w-full max-w-5xl flex flex-col items-center">
                             
-                            <div className="relative z-10 flex flex-col items-center text-center">
-                                <div className="w-20 h-20 rounded-full bg-cyan-50 text-cyan-500 flex items-center justify-center text-4xl mb-6 shadow-sm">
-                                    ❄️
+                            {/* LOGO & TITLE HEADER */}
+                            <div className="flex flex-col items-center mb-12 text-center animate-slide-up">
+                                <div className="w-32 h-32 bg-white rounded-full p-4 shadow-xl shadow-orange-100 border-4 border-orange-50 mb-6 relative hover:scale-105 transition-transform duration-500">
+                                    <img 
+                                        src="/images/logo.png" 
+                                        alt="Food Box Logo" 
+                                        className="w-full h-full object-contain drop-shadow-md"
+                                        onError={(e) => {e.currentTarget.style.display='none'; e.currentTarget.parentElement!.innerText = '📦';}} 
+                                    />
                                 </div>
-                                <h3 className="text-gray-400 font-bold uppercase tracking-widest text-sm mb-2">Zona Fría</h3>
-                                <div className="text-8xl font-black text-cyan-600 tracking-tighter mb-4 tabular-nums">
-                                    {realTemps.cold}<span className="text-4xl align-top text-cyan-400">°C</span>
-                                </div>
-                                 <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden mb-2">
-                                     <div 
-                                        className="h-full bg-gradient-to-r from-blue-400 to-cyan-500 rounded-full transition-all duration-1000"
-                                        style={{ width: `${Math.min(Math.max(realTemps.cold * 3, 0), 100)}%` }}
-                                     ></div>
-                                </div>
-                                <p className="text-sm text-gray-400">Rango ideal: 2°C - 8°C</p>
+                                <h2 className="text-4xl md:text-5xl font-black text-dark tracking-tight mb-2">
+                                    Sensores IoT
+                                </h2>
+                                <p className="text-gray-400 font-medium text-lg">Monitoreo de temperatura en tiempo real</p>
                             </div>
-                        </div>
-                        
-                        <div className="col-span-1 md:col-span-2 text-center mt-8 text-gray-400 text-sm">
-                            <p>Datos actualizados en tiempo real desde sensores IoT.</p>
+
+                            {/* CARDS GRID */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
+                                {/* Hot Sensor Card */}
+                                <div className="bg-white/60 backdrop-blur-xl rounded-[2.5rem] p-8 shadow-xl shadow-red-500/10 border border-red-100 relative overflow-hidden group hover:-translate-y-2 transition-all duration-300">
+                                    <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 transition-all group-hover:bg-red-500/10"></div>
+                                    
+                                    <div className="relative z-10 flex flex-col items-center text-center">
+                                        <div className="w-20 h-20 rounded-full bg-red-50 text-red-500 flex items-center justify-center text-4xl mb-6 shadow-inner ring-4 ring-red-50/50">
+                                            🔥
+                                        </div>
+                                        <h3 className="text-gray-400 font-bold uppercase tracking-widest text-sm mb-2">Zona Caliente</h3>
+                                        <div className="text-7xl lg:text-8xl font-black text-red-600 tracking-tighter mb-4 tabular-nums drop-shadow-sm">
+                                            {realTemps.hot}<span className="text-4xl align-top text-red-400 opacity-60">°C</span>
+                                        </div>
+                                        <div className="w-full bg-gray-100/50 rounded-full h-4 overflow-hidden mb-3 border border-gray-100">
+                                            <div 
+                                                className="h-full bg-gradient-to-r from-orange-400 to-red-600 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(239,68,68,0.5)]"
+                                                style={{ width: `${Math.min(Math.max(realTemps.hot, 0), 100)}%` }}
+                                            ></div>
+                                        </div>
+                                        <p className="text-sm font-medium text-red-400 bg-red-50 px-4 py-1 rounded-full">Meta: 60°C - 75°C</p>
+                                    </div>
+                                </div>
+
+                                {/* Cold Sensor Card */}
+                                <div className="bg-white/60 backdrop-blur-xl rounded-[2.5rem] p-8 shadow-xl shadow-cyan-500/10 border border-cyan-100 relative overflow-hidden group hover:-translate-y-2 transition-all duration-300">
+                                    <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 transition-all group-hover:bg-cyan-500/10"></div>
+                                    
+                                    <div className="relative z-10 flex flex-col items-center text-center">
+                                        <div className="w-20 h-20 rounded-full bg-cyan-50 text-cyan-500 flex items-center justify-center text-4xl mb-6 shadow-inner ring-4 ring-cyan-50/50">
+                                            ❄️
+                                        </div>
+                                        <h3 className="text-gray-400 font-bold uppercase tracking-widest text-sm mb-2">Zona Fría</h3>
+                                        <div className="text-7xl lg:text-8xl font-black text-cyan-600 tracking-tighter mb-4 tabular-nums drop-shadow-sm">
+                                            {realTemps.cold}<span className="text-4xl align-top text-cyan-400 opacity-60">°C</span>
+                                        </div>
+                                        <div className="w-full bg-gray-100/50 rounded-full h-4 overflow-hidden mb-3 border border-gray-100">
+                                            <div 
+                                                className="h-full bg-gradient-to-r from-blue-400 to-cyan-500 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
+                                                style={{ width: `${Math.min(Math.max(realTemps.cold * 3, 0), 100)}%` }}
+                                            ></div>
+                                        </div>
+                                        <p className="text-sm font-medium text-cyan-500 bg-cyan-50 px-4 py-1 rounded-full">Meta: 2°C - 8°C</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="mt-10 text-center">
+                                <p className="text-gray-400 text-sm bg-white/50 backdrop-blur px-6 py-2 rounded-full inline-flex items-center gap-2 shadow-sm border border-gray-100">
+                                    <span className="relative flex h-2 w-2">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                    </span>
+                                    Sincronización en tiempo real activa
+                                </p>
+                            </div>
                         </div>
                     </div>
                 )}
