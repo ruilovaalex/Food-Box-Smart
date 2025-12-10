@@ -517,8 +517,7 @@ export const AdminDashboard: React.FC = () => {
                                         className="w-full h-full object-contain drop-shadow-md"
                                         onError={(e) => {
                                             // Fallback Seguro
-                                            e.currentTarget.onerror = null;
-                                            e.currentTarget.src = 'https://cdn-icons-png.flaticon.com/512/7541/7541258.png';
+                                            e.currentTarget.style.display = 'none';
                                         }} 
                                     />
                                 </div>

@@ -16,6 +16,18 @@ export const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Load assets safely using Vite's URL resolution with fallback
+  let logoUrl = '/images/logo.png';
+  let gifUrl = '/images/calavera.gif';
+  
+  try {
+      logoUrl = new URL('../images/logo.png', import.meta.url).href;
+      gifUrl = new URL('../images/calavera.gif', import.meta.url).href;
+  } catch (e) {
+      // Silently fall back to static paths if URL construction fails
+      // This prevents "Failed to construct 'URL': Invalid URL" errors
+  }
+
   // Efecto visual para cambiar el título
   const [greeting, setGreeting] = useState('');
   useEffect(() => {
@@ -116,17 +128,16 @@ export const Login: React.FC = () => {
              <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/20 rounded-full blur-3xl z-0"></div>
              <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-black/20 to-transparent z-0"></div>
 
-             {/* 1. LOGO - Responsive Size & Fallback */}
+             {/* 1. LOGO - Using resolved URL */}
              <div className="relative z-10 mb-4 md:mb-8 transform hover:scale-105 transition-transform duration-500 group cursor-pointer">
                 <div className="absolute inset-0 bg-white/30 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <img 
-                    src="/images/logo.png" 
+                    src={logoUrl}
                     alt="Food Box Logo" 
                     className="w-32 h-32 md:w-56 md:h-56 lg:w-72 lg:h-72 object-contain drop-shadow-2xl relative z-10" 
                     onError={(e) => {
-                        // Fallback si la imagen local no carga en Vercel
-                        e.currentTarget.onerror = null; // Prevenir loop
-                        e.currentTarget.src = 'https://cdn-icons-png.flaticon.com/512/7541/7541258.png'; // Icono genérico de Food Box
+                        // Si falla, simplemente ocultamos la imagen para no mostrar iconos rotos
+                        e.currentTarget.style.display = 'none';
                     }}
                 />
              </div>
@@ -139,16 +150,13 @@ export const Login: React.FC = () => {
                 {isAdminMode ? 'Panel de Administración' : 'Tu comida favorita, sin filas.'}
              </p>
 
-             {/* 2. CALAVERA GIF - Fallback included */}
+             {/* 2. CALAVERA GIF - Using resolved URL */}
              <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-20 opacity-90 hover:opacity-100 transition-opacity animate-bounce-soft">
                 <img 
-                    src="/images/calavera.gif" 
+                    src={gifUrl}
                     alt="Fun" 
                     className="w-20 h-20 md:w-28 md:h-28 lg:w-36 lg:h-36 object-contain drop-shadow-lg mix-blend-screen"
-                    onError={(e) => {
-                        // Si falla el gif local, ocultamos o mostramos un backup online
-                         e.currentTarget.style.display = 'none';
-                    }}
+                    onError={(e) => e.currentTarget.style.display = 'none'}
                 />
              </div>
 
