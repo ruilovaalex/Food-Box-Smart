@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMqtt } from '../context/MqttContext';
 import { useAuth } from '../context/AuthContext';
 import { Card, Button, PageLayout, Badge, Input } from '../components/UI';
@@ -170,7 +170,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) =
 }
 
 export const AdminDashboard: React.FC = () => {
-    const { orders, simulateBoxKeypadEntry, resetDatabase, realTemps } = useMqtt();
+    const { orders, simulateBoxKeypadEntry, resetDatabase, realTemps, lastPhysicalKeyPress } = useMqtt();
     const { logout, user } = useAuth();
     const navigate = useNavigate();
     
@@ -179,6 +179,21 @@ export const AdminDashboard: React.FC = () => {
     const [selectedOrderIdForSim, setSelectedOrderIdForSim] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedOrderDetails, setSelectedOrderDetails] = useState<Order | null>(null);
+
+    // Estado para el monitor de teclado físico
+    const [physicalInputBuffer, setPhysicalInputBuffer] = useState('');
+
+    // Efecto para acumular las teclas físicas en el display
+    useEffect(() => {
+        if (lastPhysicalKeyPress && lastPhysicalKeyPress.key) {
+            // Reiniciar buffer si la tecla es C o *
+            if (lastPhysicalKeyPress.key === '*' || lastPhysicalKeyPress.key === '#') {
+                setPhysicalInputBuffer('');
+            } else {
+                setPhysicalInputBuffer(prev => (prev + lastPhysicalKeyPress.key).slice(-6)); // Max 6 chars
+            }
+        }
+    }, [lastPhysicalKeyPress]);
 
     // --- Stats Logic ---
     const totalIncome = orders.reduce((acc, o) => acc + (o.status !== 'cancelled' ? (o.total || 0) : 0), 0);
@@ -397,38 +412,67 @@ export const AdminDashboard: React.FC = () => {
                 {/* 3. SIMULATOR VIEW */}
                 {currentTab === 'simulator' && (
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in items-start">
-                        <div className="lg:col-span-7 bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 min-h-[500px]">
-                            <h3 className="font-bold text-dark text-xl mb-6">Órdenes Listas para Retirar</h3>
-                            <div className="space-y-3">
-                                {orders.filter(o => o.status === 'ready').map(order => (
-                                    <div 
-                                        key={order.id}
-                                        onClick={() => setSelectedOrderIdForSim(order.id)}
-                                        className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex justify-between items-center group ${
-                                            selectedOrderIdForSim === order.id 
-                                            ? 'border-primary bg-orange-50' 
-                                            : 'border-gray-100 hover:border-gray-200'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-sm ${selectedOrderIdForSim === order.id ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500'}`}>
-                                                📦
-                                            </div>
-                                            <div>
-                                                <h4 className="font-bold text-dark">Orden #{order.code}</h4>
-                                                <p className="text-xs text-gray-400">ID: {order.id}</p>
-                                            </div>
+                        <div className="lg:col-span-7 space-y-8">
+                             {/* BOX 1: HARDWARE MONITOR (New) */}
+                            <div className="bg-slate-900 text-white rounded-[2.5rem] p-8 shadow-sm border border-gray-800 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-green-500 opacity-10 rounded-full blur-2xl"></div>
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-10 h-10 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center text-xl">
+                                            🔌
                                         </div>
-                                        <div className="w-6 h-6 rounded-full border-2 border-gray-200 flex items-center justify-center">
-                                            {selectedOrderIdForSim === order.id && <div className="w-3 h-3 bg-primary rounded-full"></div>}
+                                        <div>
+                                            <h3 className="font-bold text-lg">Prueba de Teclado Físico</h3>
+                                            <p className="text-xs text-gray-400">Datos recibidos del ESP32 en tiempo real</p>
                                         </div>
                                     </div>
-                                ))}
-                                {orders.filter(o => o.status === 'ready').length === 0 && (
-                                    <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                                        <p className="text-gray-400">No hay órdenes esperando retiro.</p>
+                                    
+                                    <div className="bg-black/40 rounded-2xl p-6 border border-white/10 text-center">
+                                        <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-2">Entrada Recibida</p>
+                                        <div className="text-5xl font-mono text-green-400 tracking-[0.5em] h-16 flex items-center justify-center">
+                                            {physicalInputBuffer || '____'}
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-4">
+                                            Presiona <span className="text-white font-bold bg-white/20 px-1 rounded">*</span> o <span className="text-white font-bold bg-white/20 px-1 rounded">#</span> en el teclado físico para limpiar.
+                                        </p>
                                     </div>
-                                )}
+                                </div>
+                            </div>
+
+                            {/* BOX 2: Orders List */}
+                            <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 min-h-[300px]">
+                                <h3 className="font-bold text-dark text-xl mb-6">Órdenes Listas para Retirar</h3>
+                                <div className="space-y-3">
+                                    {orders.filter(o => o.status === 'ready').map(order => (
+                                        <div 
+                                            key={order.id}
+                                            onClick={() => setSelectedOrderIdForSim(order.id)}
+                                            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex justify-between items-center group ${
+                                                selectedOrderIdForSim === order.id 
+                                                ? 'border-primary bg-orange-50' 
+                                                : 'border-gray-100 hover:border-gray-200'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-sm ${selectedOrderIdForSim === order.id ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                                    📦
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-dark">Orden #{order.code}</h4>
+                                                    <p className="text-xs text-gray-400">ID: {order.id}</p>
+                                                </div>
+                                            </div>
+                                            <div className="w-6 h-6 rounded-full border-2 border-gray-200 flex items-center justify-center">
+                                                {selectedOrderIdForSim === order.id && <div className="w-3 h-3 bg-primary rounded-full"></div>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {orders.filter(o => o.status === 'ready').length === 0 && (
+                                        <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                            <p className="text-gray-400">No hay órdenes esperando retiro.</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -439,7 +483,7 @@ export const AdminDashboard: React.FC = () => {
                                 <div className="flex justify-between items-center mb-8 relative z-10">
                                     <div className="flex items-center gap-2">
                                         <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                                        <span className="text-xs font-mono text-gray-400 tracking-widest">ESP32_V1</span>
+                                        <span className="text-xs font-mono text-gray-400 tracking-widest">SIMULADOR WEB</span>
                                     </div>
                                     <span className="text-2xl">📟</span>
                                 </div>

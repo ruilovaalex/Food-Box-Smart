@@ -31,7 +31,7 @@ export const database = {
     });
   },
 
-  // Suscribirse a los SENSORES REALES (Nuevo)
+  // Suscribirse a los SENSORES REALES
   subscribeToSensors: (callback: (data: { hot: number, cold: number }) => void) => {
      // Escuchamos el documento 'system/sensors'
      return onSnapshot(doc(db, SYSTEM_COLLECTION, 'sensors'), (doc) => {
@@ -43,6 +43,19 @@ export const database = {
             });
         }
      });
+  },
+
+  // NUEVO: Suscribirse a PRUEBAS DE TECLADO FÍSICO
+  subscribeToKeypadTest: (callback: (data: { key: string, timestamp: number }) => void) => {
+    return onSnapshot(doc(db, SYSTEM_COLLECTION, 'keypad_test'), (doc) => {
+       if (doc.exists()) {
+           const data = doc.data();
+           callback({
+               key: data.key || '',
+               timestamp: data.timestamp || 0
+           });
+       }
+    });
   },
 
   addOrder: async (order: Order) => {

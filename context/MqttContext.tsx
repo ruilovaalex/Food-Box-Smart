@@ -9,14 +9,16 @@ interface MqttContextType {
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   simulateBoxKeypadEntry: (orderId: string, code: string) => boolean;
   resetDatabase: () => void;
-  realTemps: { hot: number, cold: number }; // Exponemos la temp real
+  realTemps: { hot: number, cold: number };
+  lastPhysicalKeyPress: { key: string, timestamp: number } | null; // Nuevo estado para pruebas
 }
 
 const MqttContext = createContext<MqttContextType | undefined>(undefined);
 
 export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [realTemps, setRealTemps] = useState({ hot: 0, cold: 0 }); // Estado para sensores reales
+  const [realTemps, setRealTemps] = useState({ hot: 0, cold: 0 }); 
+  const [lastPhysicalKeyPress, setLastPhysicalKeyPress] = useState<{ key: string, timestamp: number } | null>(null);
   
   const ordersRef = useRef<Order[]>([]);
 
@@ -28,12 +30,10 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const unsubscribe = database.subscribeToOrders((newOrders) => {
       setOrders(currentOrders => {
-        // Al recibir órdenes, les inyectamos la temperatura REAL actual
-        // en lugar de usar la simulada guardada.
         return newOrders.map(newOrder => {
             return {
                 ...newOrder,
-                simulatedTemps: { hot: 0, cold: 0 } // Inicializamos (se sobreescribe en UI)
+                simulatedTemps: { hot: 0, cold: 0 }
             };
         });
       });
@@ -44,14 +44,19 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // 2. Suscripción a SENSORES REALES (Firebase)
   useEffect(() => {
       const unsubscribe = database.subscribeToSensors((data) => {
-          console.log("🔥 Dato Real Recibido:", data);
           setRealTemps(data);
       });
       return () => unsubscribe();
   }, []);
 
-  // 3. Ya NO necesitamos el setInterval de simulación aleatoria.
-  // La temperatura vendrá directo de 'realTemps' a la UI.
+  // 3. NUEVO: Suscripción a TECLADO FÍSICO (Pruebas)
+  useEffect(() => {
+    const unsubscribe = database.subscribeToKeypadTest((data) => {
+        console.log("🎹 Tecla Física Detectada:", data);
+        setLastPhysicalKeyPress(data);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // 4. WORKER DE COCINA (Respaldo Automático)
   useEffect(() => {
@@ -59,7 +64,6 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const now = Date.now();
         ordersRef.current.forEach(order => {
             if (order.status === 'pending' && (now - order.createdAt > 3000)) {
-                console.log(`[COCINA] La orden ${order.code} está lista.`);
                 updateOrderStatus(order.id, 'ready');
             }
         });
@@ -99,15 +103,13 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       database.clearDatabase();
   };
 
-  // Inyectamos las temperaturas reales en las órdenes antes de enviarlas al Provider
-  // Esto hace que la UI siempre vea el dato fresco del sensor
   const ordersWithRealTemps = orders.map(o => ({
       ...o,
-      simulatedTemps: realTemps // Sobreescribimos con el dato real del ESP32
+      simulatedTemps: realTemps
   }));
 
   return (
-    <MqttContext.Provider value={{ orders: ordersWithRealTemps, createOrder, updateOrderStatus, simulateBoxKeypadEntry, resetDatabase, realTemps }}>
+    <MqttContext.Provider value={{ orders: ordersWithRealTemps, createOrder, updateOrderStatus, simulateBoxKeypadEntry, resetDatabase, realTemps, lastPhysicalKeyPress }}>
       {children}
     </MqttContext.Provider>
   );
