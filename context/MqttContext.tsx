@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { Order, OrderStatus } from '../types';
 import { database } from '../services/database';
+import { BOX_MASTER_CODE } from '../constants';
 
 interface MqttContextType {
   orders: Order[];
@@ -10,7 +11,9 @@ interface MqttContextType {
   simulateBoxKeypadEntry: (orderId: string, code: string) => boolean;
   resetDatabase: () => void;
   realTemps: { hot: number, cold: number };
-  lastPhysicalKeyPress: { key: string, timestamp: number } | null; // Nuevo estado para pruebas
+  lastPhysicalKeyPress: { key: string, timestamp: number } | null;
+  physicalBuffer: string; // Buffer global compartido
+  setPhysicalBuffer: (val: string) => void;
 }
 
 const MqttContext = createContext<MqttContextType | undefined>(undefined);
@@ -19,6 +22,7 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [orders, setOrders] = useState<Order[]>([]);
   const [realTemps, setRealTemps] = useState({ hot: 0, cold: 0 }); 
   const [lastPhysicalKeyPress, setLastPhysicalKeyPress] = useState<{ key: string, timestamp: number } | null>(null);
+  const [physicalBuffer, setPhysicalBuffer] = useState('');
   
   const ordersRef = useRef<Order[]>([]);
 
@@ -26,22 +30,15 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     ordersRef.current = orders;
   }, [orders]);
 
-  // 1. Suscripción a Pedidos (Firebase)
+  // 1. Suscripción a Pedidos
   useEffect(() => {
     const unsubscribe = database.subscribeToOrders((newOrders) => {
-      setOrders(currentOrders => {
-        return newOrders.map(newOrder => {
-            return {
-                ...newOrder,
-                simulatedTemps: { hot: 0, cold: 0 }
-            };
-        });
-      });
+      setOrders(newOrders);
     });
     return () => unsubscribe();
   }, []);
 
-  // 2. Suscripción a SENSORES REALES (Firebase)
+  // 2. Suscripción a Sensores
   useEffect(() => {
       const unsubscribe = database.subscribeToSensors((data) => {
           setRealTemps(data);
@@ -49,16 +46,39 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return () => unsubscribe();
   }, []);
 
-  // 3. NUEVO: Suscripción a TECLADO FÍSICO (Pruebas)
+  // 3. Suscripción a Teclado Físico y Lógica de Apertura
   useEffect(() => {
     const unsubscribe = database.subscribeToKeypadTest((data) => {
-        console.log("🎹 Tecla Física Detectada:", data);
+        if (!data || !data.key) return;
+        
         setLastPhysicalKeyPress(data);
+        
+        // Lógica de buffer
+        const key = data.key;
+        if (key === '*' || key === '#') {
+            setPhysicalBuffer('');
+        } else {
+            setPhysicalBuffer(prev => {
+                const newBuffer = (prev + key).slice(-4); // Mantener últimos 4 dígitos
+                
+                // Si el buffer coincide con la contraseña maestra
+                if (newBuffer === BOX_MASTER_CODE) {
+                    // Buscar el primer pedido 'ready' para entregarlo
+                    const readyOrder = ordersRef.current.find(o => o.status === 'ready');
+                    if (readyOrder) {
+                        console.log("🔓 Contraseña correcta! Abriendo para pedido:", readyOrder.id);
+                        updateOrderStatus(readyOrder.id, 'delivered');
+                        return ''; // Limpiar buffer tras éxito
+                    }
+                }
+                return newBuffer;
+            });
+        }
     });
     return () => unsubscribe();
   }, []);
 
-  // 4. WORKER DE COCINA (Respaldo Automático)
+  // 4. Worker de cocina (Simulación de preparación)
   useEffect(() => {
     const kitchenTimer = setInterval(() => {
         const now = Date.now();
@@ -89,10 +109,7 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const simulateBoxKeypadEntry = (orderId: string, inputCode: string) => {
-    const order = ordersRef.current.find(o => o.id === orderId);
-    if (!order) return false;
-
-    if (order.code === inputCode) {
+    if (inputCode === BOX_MASTER_CODE) {
       updateOrderStatus(orderId, 'delivered'); 
       return true;
     }
@@ -103,13 +120,18 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       database.clearDatabase();
   };
 
-  const ordersWithRealTemps = orders.map(o => ({
-      ...o,
-      simulatedTemps: realTemps
-  }));
-
   return (
-    <MqttContext.Provider value={{ orders: ordersWithRealTemps, createOrder, updateOrderStatus, simulateBoxKeypadEntry, resetDatabase, realTemps, lastPhysicalKeyPress }}>
+    <MqttContext.Provider value={{ 
+        orders, 
+        createOrder, 
+        updateOrderStatus, 
+        simulateBoxKeypadEntry, 
+        resetDatabase, 
+        realTemps, 
+        lastPhysicalKeyPress,
+        physicalBuffer,
+        setPhysicalBuffer
+    }}>
       {children}
     </MqttContext.Provider>
   );
