@@ -6,7 +6,7 @@ import { BOX_MASTER_CODE } from '../constants';
 
 interface MqttContextType {
   orders: Order[];
-  createOrder: (order: Order) => void;
+  createOrder: (order: Order) => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   simulateBoxKeypadEntry: (orderId: string, code: string) => boolean;
   resetDatabase: () => void;
@@ -97,6 +97,7 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await database.addOrder(order);
     } catch (error) {
         console.error("Error creando orden:", error);
+        throw error;
     }
   };
 

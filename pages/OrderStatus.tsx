@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMqtt } from '../context/MqttContext';
 import { Navbar, Card, Button, PageLayout } from '../components/UI';
@@ -42,16 +43,46 @@ export const OrderStatusPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { orders, updateOrderStatus } = useMqtt();
   const navigate = useNavigate();
-  const [confirmStep, setConfirmStep] = useState(0); // 0: Normal, 1: Confirming
+  const [confirmStep, setConfirmStep] = useState(0); 
+  const [isInitializing, setIsInitializing] = useState(true);
 
   const order = orders.find(o => o.id === id);
+
+  // Dar 2 segundos de cortesía para que Firestore sincronice si la orden no se encuentra de inmediato
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        setIsInitializing(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Si se encuentra la orden, quitamos el estado de inicialización
+  useEffect(() => {
+    if (order) setIsInitializing(false);
+  }, [order]);
+
+  if (isInitializing) {
+      return (
+        <PageLayout className="flex items-center justify-center">
+            <div className="text-center animate-fade-in">
+                <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-lg text-gray-500 font-medium">Buscando tu pedido...</p>
+            </div>
+        </PageLayout>
+      );
+  }
 
   if (!order) {
       return (
         <PageLayout className="flex items-center justify-center">
-            <div className="text-center">
-                <p className="text-lg text-gray-500 mb-4">Orden no encontrada</p>
-                <Button onClick={() => navigate('/menu')}>Volver al menú</Button>
+            <div className="text-center animate-fade-in p-8">
+                <div className="text-6xl mb-4">🔍</div>
+                <h2 className="text-2xl font-bold text-dark mb-2">Pedido no encontrado</h2>
+                <p className="text-gray-500 mb-8 max-w-xs mx-auto">No pudimos localizar la orden #{id?.slice(-5)}. Si acabas de pagar, espera unos segundos.</p>
+                <div className="flex flex-col gap-3">
+                    <Button onClick={() => window.location.reload()} variant="secondary">Reintentar</Button>
+                    <Button onClick={() => navigate('/menu')}>Volver al menú</Button>
+                </div>
             </div>
         </PageLayout>
       );
@@ -74,7 +105,7 @@ export const OrderStatusPage: React.FC = () => {
 
   return (
     <PageLayout>
-       <Navbar title={`Pedido #${order.id.slice(-4)}`} onBack={() => navigate('/menu')} transparent />
+       <Navbar title={`Pedido #${order.id.slice(-5)}`} onBack={() => navigate('/menu')} transparent />
        
        <div className="max-w-md mx-auto p-6 flex flex-col items-center gap-8">
           

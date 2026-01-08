@@ -76,11 +76,11 @@ export const Cart: React.FC = () => {
       return Object.keys(errors).length === 0;
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!validateForm()) return;
 
     setIsProcessing(true);
-    setTimeout(() => {
+    try {
         const shortId = `ORD-${Math.floor(10000 + Math.random() * 90000)}`;
         
         const newOrder: Order = {
@@ -90,7 +90,7 @@ export const Cart: React.FC = () => {
             items: [...items],
             total: total,
             status: 'pending',
-            code: BOX_MASTER_CODE, // USAR CONTRASEÑA ESTABLECIDA
+            code: BOX_MASTER_CODE, 
             createdAt: Date.now(),
             customerDetails: {
                 name,
@@ -99,11 +99,15 @@ export const Cart: React.FC = () => {
             }
         };
 
-        createOrder(newOrder);
+        await createOrder(newOrder); // ESPERAR A FIRESTORE
         clearCart();
         setIsProcessing(false);
         navigate(`/order/${newOrder.id}`);
-    }, 500);
+    } catch (err) {
+        console.error(err);
+        setIsProcessing(false);
+        alert("Error al procesar el pedido. Intente de nuevo.");
+    }
   };
 
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
