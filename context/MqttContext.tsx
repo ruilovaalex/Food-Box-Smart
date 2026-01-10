@@ -2,27 +2,23 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { Order, OrderStatus } from '../types';
 import { database } from '../services/database';
-import { BOX_MASTER_CODE } from '../constants';
+import { useAuth } from './AuthContext';
 
 interface MqttContextType {
   orders: Order[];
-  createOrder: (order: Order) => Promise<void>;
+  createOrder: (order: Order) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   simulateBoxKeypadEntry: (orderId: string, code: string) => boolean;
   resetDatabase: () => void;
   realTemps: { hot: number, cold: number };
-  lastPhysicalKeyPress: { key: string, timestamp: number } | null;
-  physicalBuffer: string; // Buffer global compartido
-  setPhysicalBuffer: (val: string) => void;
 }
 
 const MqttContext = createContext<MqttContextType | undefined>(undefined);
 
 export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [realTemps, setRealTemps] = useState({ hot: 0, cold: 0 }); 
-  const [lastPhysicalKeyPress, setLastPhysicalKeyPress] = useState<{ key: string, timestamp: number } | null>(null);
-  const [physicalBuffer, setPhysicalBuffer] = useState('');
   
   const ordersRef = useRef<Order[]>([]);
 
@@ -30,74 +26,52 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     ordersRef.current = orders;
   }, [orders]);
 
-  // 1. Suscripción a Pedidos
+  // Suscripción a Pedidos (Solo cuando hay usuario)
   useEffect(() => {
-    const unsubscribe = database.subscribeToOrders((newOrders) => {
-      setOrders(newOrders);
-    });
+    if (!user) {
+        setOrders([]);
+        return;
+    }
+
+    const unsubscribe = database.subscribeToOrders(
+        (newOrders) => setOrders(newOrders),
+        user.id,
+        user.role === 'admin'
+    );
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
-  // 2. Suscripción a Sensores
+  // Suscripción a Sensores (Solo para el Admin)
   useEffect(() => {
-      const unsubscribe = database.subscribeToSensors((data) => {
-          setRealTemps(data);
-      });
-      return () => unsubscribe();
-  }, []);
+    if (!user || user.role !== 'admin') return;
 
-  // 3. Suscripción a Teclado Físico y Lógica de Apertura
-  useEffect(() => {
-    const unsubscribe = database.subscribeToKeypadTest((data) => {
-        if (!data || !data.key) return;
-        
-        setLastPhysicalKeyPress(data);
-        
-        // Lógica de buffer
-        const key = data.key;
-        if (key === '*' || key === '#') {
-            setPhysicalBuffer('');
-        } else {
-            setPhysicalBuffer(prev => {
-                const newBuffer = (prev + key).slice(-4); // Mantener últimos 4 dígitos
-                
-                // Si el buffer coincide con la contraseña maestra
-                if (newBuffer === BOX_MASTER_CODE) {
-                    // Buscar el primer pedido 'ready' para entregarlo
-                    const readyOrder = ordersRef.current.find(o => o.status === 'ready');
-                    if (readyOrder) {
-                        console.log("🔓 Contraseña correcta! Abriendo para pedido:", readyOrder.id);
-                        updateOrderStatus(readyOrder.id, 'delivered');
-                        return ''; // Limpiar buffer tras éxito
-                    }
-                }
-                return newBuffer;
-            });
-        }
-    });
-    return () => unsubscribe();
-  }, []);
+    const unsubSensors = database.subscribeToSensors(setRealTemps);
+    
+    return () => {
+        unsubSensors();
+    };
+  }, [user]);
 
-  // 4. Worker de cocina (Simulación de preparación)
+  // Worker de cocina
   useEffect(() => {
+    if (!user) return;
     const kitchenTimer = setInterval(() => {
         const now = Date.now();
         ordersRef.current.forEach(order => {
-            if (order.status === 'pending' && (now - order.createdAt > 3000)) {
+            if (order.status === 'pending' && (now - order.createdAt > 5000)) {
                 updateOrderStatus(order.id, 'ready');
             }
         });
-    }, 1000); 
+    }, 2000); 
 
     return () => clearInterval(kitchenTimer);
-  }, []); 
+  }, [user]); 
 
   const createOrder = async (order: Order) => {
     try {
         await database.addOrder(order);
     } catch (error) {
         console.error("Error creando orden:", error);
-        throw error;
     }
   };
 
@@ -110,28 +84,21 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const simulateBoxKeypadEntry = (orderId: string, inputCode: string) => {
-    if (inputCode === BOX_MASTER_CODE) {
+    const order = ordersRef.current.find(o => o.id === orderId);
+    if (!order) return false;
+    if (order.code === inputCode) {
       updateOrderStatus(orderId, 'delivered'); 
       return true;
     }
     return false;
   };
 
-  const resetDatabase = () => {
-      database.clearDatabase();
-  };
+  const resetDatabase = () => database.clearDatabase();
 
   return (
     <MqttContext.Provider value={{ 
-        orders, 
-        createOrder, 
-        updateOrderStatus, 
-        simulateBoxKeypadEntry, 
-        resetDatabase, 
-        realTemps, 
-        lastPhysicalKeyPress,
-        physicalBuffer,
-        setPhysicalBuffer
+        orders, createOrder, updateOrderStatus, simulateBoxKeypadEntry, 
+        resetDatabase, realTemps 
     }}>
       {children}
     </MqttContext.Provider>
