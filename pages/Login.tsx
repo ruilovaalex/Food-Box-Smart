@@ -16,7 +16,7 @@ export const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Load assets safely
+  
   let logoUrl = '/images/logo.png';
   let gifUrl = '/images/calavera.gif';
 
