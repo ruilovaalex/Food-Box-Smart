@@ -1,25 +1,27 @@
-
-import React, { memo } from 'react';
+import React from 'react';
 
 // --- Layout Wrapper ---
-export const PageLayout: React.FC<{ children: React.ReactNode, className?: string }> = memo(({ children, className = '' }) => (
+export const PageLayout: React.FC<{ children: React.ReactNode, className?: string }> = ({ children, className = '' }) => (
   <div className={`min-h-screen bg-[#F8F9FD] text-dark font-sans animate-fade-in ${className}`}>
     {children}
   </div>
-));
+);
 
 // --- Badge ---
-export const Badge: React.FC<{ type: 'hot' | 'cold' | string, className?: string }> = memo(({ type, className = '' }) => {
+export const Badge: React.FC<{ type: 'hot' | 'cold' | string, className?: string }> = ({ type, className = '' }) => {
   const isHot = type === 'hot';
   const isCold = type === 'cold';
   
-  const styles = isHot 
-    ? "bg-orange-50 text-orange-600 border border-orange-100" 
-    : isCold 
-    ? "bg-teal-50 text-teal-600 border border-teal-100" 
-    : "bg-gray-100 text-gray-600";
-    
-  const icon = isHot ? "🔥" : isCold ? "❄️" : "";
+  let styles = "bg-gray-100 text-gray-600";
+  let icon = "";
+
+  if (isHot) {
+    styles = "bg-orange-50 text-orange-600 border border-orange-100";
+    icon = "🔥";
+  } else if (isCold) {
+    styles = "bg-teal-50 text-teal-600 border border-teal-100";
+    icon = "❄️";
+  }
 
   return (
     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${styles} ${className}`}>
@@ -27,7 +29,7 @@ export const Badge: React.FC<{ type: 'hot' | 'cold' | string, className?: string
       {isHot ? 'Caliente' : isCold ? 'Frío' : type}
     </span>
   );
-});
+};
 
 // --- Button ---
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -37,7 +39,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: React.ReactNode;
 }
 
-export const Button: React.FC<ButtonProps> = memo(({ 
+export const Button: React.FC<ButtonProps> = ({ 
   children, 
   variant = 'primary', 
   fullWidth, 
@@ -76,7 +78,7 @@ export const Button: React.FC<ButtonProps> = memo(({
       )}
     </button>
   );
-});
+};
 
 // --- Input Field ---
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -85,7 +87,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   icon?: React.ReactNode;
 }
 
-export const Input: React.FC<InputProps> = memo(({ label, error, className = '', icon, ...props }) => (
+export const Input: React.FC<InputProps> = ({ label, error, className = '', icon, ...props }) => (
   <div className="w-full group">
     {label && <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1 group-focus-within:text-primary transition-colors">{label}</label>}
     <div className="relative">
@@ -101,20 +103,20 @@ export const Input: React.FC<InputProps> = memo(({ label, error, className = '',
     </div>
     {error && <p className="text-red-500 text-xs mt-1.5 ml-1 font-medium animate-slide-up">⚠️ {error}</p>}
   </div>
-));
+);
 
 // --- Card ---
-export const Card: React.FC<{ children: React.ReactNode, className?: string, onClick?: () => void }> = memo(({ children, className = '', onClick }) => (
+export const Card: React.FC<{ children: React.ReactNode, className?: string, onClick?: () => void }> = ({ children, className = '', onClick }) => (
   <div 
     onClick={onClick}
     className={`bg-white rounded-3xl shadow-sm border border-gray-100/50 overflow-hidden ${onClick ? 'cursor-pointer hover:shadow-xl hover:shadow-gray-200/50 hover:-translate-y-1 transition-all duration-300' : ''} ${className}`}
   >
     {children}
   </div>
-));
+);
 
 // --- Navbar ---
-export const Navbar: React.FC<{ title?: React.ReactNode; onBack?: () => void; rightAction?: React.ReactNode, transparent?: boolean, className?: string }> = memo(({ title, onBack, rightAction, transparent, className = '' }) => (
+export const Navbar: React.FC<{ title?: React.ReactNode; onBack?: () => void; rightAction?: React.ReactNode, transparent?: boolean, className?: string }> = ({ title, onBack, rightAction, transparent, className = '' }) => (
   <div className={`sticky top-0 z-50 px-4 py-3 flex items-center justify-between transition-all duration-300 ${transparent ? 'bg-transparent' : 'bg-white/80 backdrop-blur-lg border-b border-gray-100 shadow-sm'} ${className}`}>
     <div className="flex items-center gap-3 flex-1">
       {onBack && (
@@ -128,10 +130,10 @@ export const Navbar: React.FC<{ title?: React.ReactNode; onBack?: () => void; ri
     </div>
     <div className="flex-none">{rightAction}</div>
   </div>
-));
+);
 
 // --- Quantity Control ---
-export const QuantityControl: React.FC<{ qty: number; onInc: () => void; onDec: () => void; small?: boolean }> = memo(({ qty, onInc, onDec, small }) => (
+export const QuantityControl: React.FC<{ qty: number; onInc: () => void; onDec: () => void; small?: boolean }> = ({ qty, onInc, onDec, small }) => (
   <div className={`flex items-center gap-3 ${small ? 'bg-gray-50 rounded-xl p-1' : ''}`}>
     <button 
         onClick={onDec} 
@@ -149,4 +151,4 @@ export const QuantityControl: React.FC<{ qty: number; onInc: () => void; onDec: 
         +
     </button>
   </div>
-));
+);

@@ -27,6 +27,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Escuchar cambios de sesión en tiempo real (Persistencia automática)
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
@@ -40,18 +41,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const mapFirebaseUser = (firebaseUser: FirebaseUser) => {
-    // IMPORTANTE: Usamos firebaseUser.uid directamente para que coincida con request.auth.uid en Firestore
+    // 1. Caso Invitado (Anónimo)
     if (firebaseUser.isAnonymous) {
       setUser({
-        id: firebaseUser.uid,
+        id: 'guest-' + firebaseUser.uid.slice(0, 5),
         name: 'Invitado',
-        email: '', 
+        email: '', // Invitados no tienen email
         role: 'client'
       });
       return;
     }
 
-    const isAdmin = firebaseUser.email?.toLowerCase().includes('admin@foodbox.com');
+    // 2. LÓGICA DE ROLES:
+    // Si el email contiene 'admin', asignamos rol admin.
+    const isAdmin = firebaseUser.email?.includes('admin@foodbox.com');
 
     setUser({
       id: firebaseUser.uid,
@@ -67,7 +70,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const register = async (name: string, email: string, password: string) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(userCredential.user, { displayName: name });
+    // Actualizar el nombre del usuario en Firebase
+    await updateProfile(userCredential.user, {
+      displayName: name
+    });
+    // Forzar actualización del estado local
     mapFirebaseUser(userCredential.user);
   };
 

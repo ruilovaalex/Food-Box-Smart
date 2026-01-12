@@ -6,23 +6,21 @@ import { useAuth } from '../context/AuthContext';
 import { Navbar, Button, QuantityControl, PageLayout, Input } from '../components/UI';
 import { useNavigate } from 'react-router-dom';
 import { Order } from '../types';
+import { BOX_MASTER_CODE } from '../constants';
 
 export const Cart: React.FC = () => {
   const { items, total, decreaseQuantity, addToCart, removeFromCart, clearCart } = useCart();
   const { createOrder } = useMqtt();
-  const { user, logout } = useAuth(); // Agregamos logout aquí
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Detectar si es invitado
   const isGuest = user?.id.startsWith('guest-');
 
-  // Form States
   const [name, setName] = useState(user?.name && !isGuest ? user.name : '');
   const [phone, setPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
   
-  // Card States
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvv, setCardCvv] = useState('');
@@ -82,25 +80,20 @@ export const Cart: React.FC = () => {
     if (!validateForm()) return;
 
     setIsProcessing(true);
-    // Simulación de procesamiento
     setTimeout(() => {
-        // CÓDIGO FIJO SOLICITADO: 1234
-        const orderCode = "1234";
-        
-        // Generar un ID corto y legible (Ej: ORD-48291)
         const shortId = `ORD-${Math.floor(10000 + Math.random() * 90000)}`;
         
         const newOrder: Order = {
             id: shortId,
             userId: user?.id || 'guest',
-            userEmail: user?.email || 'Invitado', // Guardamos el email real
+            userEmail: user?.email || 'Invitado',
             items: [...items],
             total: total,
             status: 'pending',
-            code: orderCode,
+            code: BOX_MASTER_CODE, // USAR CONTRASEÑA ESTABLECIDA
             createdAt: Date.now(),
             customerDetails: {
-                name, // Este es el nombre que se mostrará
+                name,
                 phone,
                 paymentMethod
             }
@@ -113,7 +106,6 @@ export const Cart: React.FC = () => {
     }, 500);
   };
 
-  // Helper para formatear tarjeta
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       let val = e.target.value.replace(/\D/g, '');
       val = val.substring(0, 16);
@@ -140,8 +132,6 @@ export const Cart: React.FC = () => {
       />
       
       <div className="max-w-2xl mx-auto p-4 space-y-6">
-        
-        {/* Products List */}
         <div className="space-y-3">
             <h3 className="font-bold text-dark text-sm uppercase tracking-wide ml-1">Productos</h3>
             {items.map((item, index) => (
@@ -150,12 +140,7 @@ export const Cart: React.FC = () => {
                 className="bg-white p-3 rounded-2xl flex items-center gap-4 shadow-sm border border-gray-50 animate-slide-up"
                 style={{ animationDelay: `${index * 50}ms` }}
             >
-                <img 
-                    src={item.image} 
-                    alt={item.name} 
-                    onError={(e) => handleImageError(e, item.type)}
-                    className="w-20 h-20 rounded-xl object-cover shadow-sm" 
-                />
+                <img src={item.image} alt={item.name} onError={(e) => handleImageError(e, item.type)} className="w-20 h-20 rounded-xl object-cover shadow-sm" />
                 <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-dark truncate">{item.name}</h4>
                     <p className="text-sm text-gray-400 mb-2 font-medium">{item.type === 'hot' ? '🔥 Caliente' : '❄️ Frío'}</p>
@@ -164,99 +149,36 @@ export const Cart: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex flex-col items-center gap-2">
-                    <QuantityControl 
-                        small
-                        qty={item.quantity}
-                        onInc={() => addToCart(item)}
-                        onDec={() => decreaseQuantity(item.id)}
-                    />
+                    <QuantityControl small qty={item.quantity} onInc={() => addToCart(item)} onDec={() => decreaseQuantity(item.id)} />
                 </div>
             </div>
             ))}
         </div>
 
-        {/* Checkout Form - Solo visible si NO es invitado */}
         {!isGuest ? (
             <div className="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
                 <h3 className="font-bold text-dark text-lg mb-4 flex items-center gap-2">
                     <span>📝</span> Datos de Pago
                 </h3>
                 <div className="space-y-4">
-                    <Input 
-                        label="Nombre Completo"
-                        placeholder="Ej. Juan Pérez"
-                        name="name"
-                        autoComplete="name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        error={formErrors.name}
-                    />
-                    <Input 
-                        label="Número de Teléfono"
-                        type="tel"
-                        placeholder="099..."
-                        name="phone"
-                        autoComplete="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        error={formErrors.phone}
-                    />
-                    
+                    <Input label="Nombre Completo" placeholder="Ej. Juan Pérez" name="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} error={formErrors.name} />
+                    <Input label="Número de Teléfono" type="tel" placeholder="099..." name="phone" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} error={formErrors.phone} />
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2 ml-1">Método de Pago</label>
                         <div className="grid grid-cols-2 gap-3 mb-4">
-                            <button 
-                                className={`p-3 rounded-2xl border font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                                    paymentMethod === 'cash' 
-                                    ? 'bg-green-50 border-green-500 text-green-700 shadow-sm' 
-                                    : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
-                                }`}
-                                onClick={() => setPaymentMethod('cash')}
-                            >
+                            <button className={`p-3 rounded-2xl border font-bold text-sm flex items-center justify-center gap-2 transition-all ${paymentMethod === 'cash' ? 'bg-green-50 border-green-500 text-green-700 shadow-sm' : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'}`} onClick={() => setPaymentMethod('cash')}>
                                 <span>💵</span> Efectivo
                             </button>
-                            <button 
-                                className={`p-3 rounded-2xl border font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                                    paymentMethod === 'card' 
-                                    ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm' 
-                                    : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
-                                }`}
-                                onClick={() => setPaymentMethod('card')}
-                            >
+                            <button className={`p-3 rounded-2xl border font-bold text-sm flex items-center justify-center gap-2 transition-all ${paymentMethod === 'card' ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm' : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'}`} onClick={() => setPaymentMethod('card')}>
                                 <span>💳</span> Tarjeta
                             </button>
                         </div>
-
-                        {/* Card Input Fields - Conditional Rendering */}
                         {paymentMethod === 'card' && (
                             <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-4 animate-fade-in">
-                                <Input 
-                                    label="Número de Tarjeta"
-                                    placeholder="0000 0000 0000 0000"
-                                    value={cardNumber}
-                                    onChange={handleCardNumberChange}
-                                    error={formErrors.cardNumber}
-                                    maxLength={19}
-                                    icon={<span className="text-gray-400">💳</span>}
-                                />
+                                <Input label="Número de Tarjeta" placeholder="0000 0000 0000 0000" value={cardNumber} onChange={handleCardNumberChange} error={formErrors.cardNumber} maxLength={19} icon={<span className="text-gray-400">💳</span>} />
                                 <div className="grid grid-cols-2 gap-4">
-                                    <Input 
-                                        label="Expiración"
-                                        placeholder="MM/YY"
-                                        value={cardExpiry}
-                                        onChange={handleExpiryChange}
-                                        error={formErrors.cardExpiry}
-                                        maxLength={5}
-                                    />
-                                    <Input 
-                                        label="CVV"
-                                        placeholder="123"
-                                        type="password"
-                                        maxLength={3}
-                                        value={cardCvv}
-                                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
-                                        error={formErrors.cardCvv}
-                                    />
+                                    <Input label="Expiración" placeholder="MM/YY" value={cardExpiry} onChange={handleExpiryChange} error={formErrors.cardExpiry} maxLength={5} />
+                                    <Input label="CVV" placeholder="123" type="password" maxLength={3} value={cardCvv} onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))} error={formErrors.cardCvv} />
                                 </div>
                             </div>
                         )}
@@ -267,32 +189,18 @@ export const Cart: React.FC = () => {
             <div className="bg-orange-50 p-6 rounded-3xl border border-orange-100 text-center">
                 <span className="text-4xl mb-2 block">🔒</span>
                 <h3 className="font-bold text-dark text-lg mb-2">Modo Visita</h3>
-                <p className="text-gray-600 text-sm mb-4">
-                    Estás navegando como invitado. Para confirmar tu pedido y pagar, necesitas crear una cuenta o iniciar sesión.
-                </p>
+                <p className="text-gray-600 text-sm mb-4">Estás navegando como invitado. Para confirmar tu pedido y pagar, necesitas crear una cuenta o iniciar sesión.</p>
             </div>
         )}
 
-        {/* Receipt Style Summary */}
         <div className="bg-white p-6 rounded-3xl shadow-xl shadow-gray-200/50 relative overflow-hidden">
-            {/* Decoration: jagged line top */}
             <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-orange-100 to-orange-50" />
-            
             <h3 className="font-bold text-lg text-dark mb-6">Resumen de Pago</h3>
             <div className="space-y-3 text-sm">
-                <div className="flex justify-between text-gray-500">
-                    <span>Subtotal</span>
-                    <span>${total.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-gray-500">
-                    <span>Tarifa de servicio</span>
-                    <span>$0.00</span>
-                </div>
+                <div className="flex justify-between text-gray-500"><span>Subtotal</span><span>${total.toFixed(2)}</span></div>
+                <div className="flex justify-between text-gray-500"><span>Tarifa de servicio</span><span>$0.00</span></div>
                 <div className="my-4 border-t border-dashed border-gray-300"></div>
-                <div className="flex justify-between text-xl font-extrabold text-dark">
-                    <span>Total a Pagar</span>
-                    <span>${total.toFixed(2)}</span>
-                </div>
+                <div className="flex justify-between text-xl font-extrabold text-dark"><span>Total a Pagar</span><span>${total.toFixed(2)}</span></div>
             </div>
         </div>
       </div>
@@ -300,25 +208,11 @@ export const Cart: React.FC = () => {
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg p-5 border-t border-gray-100 z-40 rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
           <div className="max-w-2xl mx-auto">
             {!isGuest ? (
-                <Button 
-                    onClick={handleCheckout} 
-                    disabled={isProcessing} 
-                    isLoading={isProcessing}
-                    fullWidth 
-                    className="text-lg py-4 shadow-xl shadow-orange-500/20"
-                >
+                <Button onClick={handleCheckout} disabled={isProcessing} isLoading={isProcessing} fullWidth className="text-lg py-4 shadow-xl shadow-orange-500/20">
                     {isProcessing ? 'Procesando...' : 'Confirmar Pedido'}
                 </Button>
             ) : (
-                <Button 
-                    onClick={() => {
-                        logout(); // Cerramos la sesión de invitado
-                        navigate('/'); // Redirigimos al login
-                    }} 
-                    fullWidth 
-                    variant="secondary"
-                    className="text-lg py-4 border-primary text-primary"
-                >
+                <Button onClick={() => { logout(); navigate('/'); }} fullWidth variant="secondary" className="text-lg py-4 border-primary text-primary">
                     🔒 Inicia sesión para ordenar
                 </Button>
             )}

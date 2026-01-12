@@ -1,7 +1,8 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { Order, OrderStatus } from '../types';
 import { database } from '../services/database';
+import { BOX_MASTER_CODE } from '../constants';
 import { useAuth } from './AuthContext';
 
 interface MqttContextType {
@@ -11,65 +12,99 @@ interface MqttContextType {
   simulateBoxKeypadEntry: (orderId: string, code: string) => boolean;
   resetDatabase: () => void;
   realTemps: { hot: number, cold: number };
+  lastPhysicalKeyPress: { key: string, timestamp: number } | null;
+  physicalBuffer: string; 
+  setPhysicalBuffer: (val: string) => void;
 }
 
 const MqttContext = createContext<MqttContextType | undefined>(undefined);
 
 export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user } = useAuth(); // Obtenemos el usuario para manejar permisos
   const [orders, setOrders] = useState<Order[]>([]);
   const [realTemps, setRealTemps] = useState({ hot: 0, cold: 0 }); 
+  const [lastPhysicalKeyPress, setLastPhysicalKeyPress] = useState<{ key: string, timestamp: number } | null>(null);
+  const [physicalBuffer, setPhysicalBuffer] = useState('');
+  
   const ordersRef = useRef<Order[]>([]);
 
   useEffect(() => {
     ordersRef.current = orders;
   }, [orders]);
 
-  const updateOrderStatus = useCallback(async (orderId: string, status: OrderStatus) => {
-    try {
-        await database.updateOrderStatus(orderId, status);
-    } catch (error) {
-        console.error(`Error actualizando estado:`, error);
-    }
-  }, []);
-
-  // Suscripción a Pedidos
+  // 1. Suscripción a Pedidos (Filtrada por Usuario para evitar Permission Denied)
   useEffect(() => {
     if (!user) {
         setOrders([]);
         return;
     }
 
+    const isAdmin = user.role === 'admin';
     const unsubscribe = database.subscribeToOrders(
         (newOrders) => setOrders(newOrders),
         user.id,
-        user.role === 'admin'
+        isAdmin
     );
     return () => unsubscribe();
   }, [user]);
 
-  // Suscripción a Sensores (Solo para el Admin)
+  // 2. Suscripción a Sensores y Teclado (SOLO PARA ADMINS)
   useEffect(() => {
-    if (!user || user.role !== 'admin') return;
-    const unsubSensors = database.subscribeToSensors(setRealTemps);
-    return () => unsubSensors();
+      if (!user || user.role !== 'admin') return;
+
+      const unsubSensors = database.subscribeToSensors((data) => {
+          setRealTemps(data);
+      });
+
+      const unsubKeypad = database.subscribeToKeypadTest((data) => {
+          if (!data || !data.key) return;
+          setLastPhysicalKeyPress(data);
+          
+          const key = data.key;
+          if (key === '*' || key === '#') {
+              setPhysicalBuffer('');
+          } else {
+              setPhysicalBuffer(prev => {
+                  const newBuffer = (prev + key).slice(-4);
+                  if (newBuffer === BOX_MASTER_CODE) {
+                      const readyOrder = ordersRef.current.find(o => o.status === 'ready');
+                      if (readyOrder) {
+                          updateOrderStatus(readyOrder.id, 'delivered');
+                          return ''; 
+                      }
+                  }
+                  return newBuffer;
+              });
+          }
+      });
+
+      return () => {
+          unsubSensors();
+          unsubKeypad();
+      };
   }, [user]);
 
-  // Worker de cocina optimizado
+  // 3. Worker de cocina (Solo se ejecuta si hay un usuario activo)
   useEffect(() => {
     if (!user) return;
-    
+
     const kitchenTimer = setInterval(() => {
         const now = Date.now();
         ordersRef.current.forEach(order => {
-            if (order.status === 'pending' && (now - order.createdAt > 5000)) {
-                updateOrderStatus(order.id, 'ready');
+            // Solo intentamos actualizar pedidos si somos el dueño o somos admin
+            // Firebase rechazará la actualización si no tenemos permiso
+            if (order.status === 'pending' && (now - order.createdAt > 3000)) {
+                // Verificación local extra de seguridad
+                const canUpdate = user.role === 'admin' || order.userId === user.id;
+                if (canUpdate) {
+                    updateOrderStatus(order.id, 'ready');
+                }
             }
         });
-    }, 3000); 
+    }, 2000); 
 
     return () => clearInterval(kitchenTimer);
-  }, [user, updateOrderStatus]); 
+  }, [user]); 
 
   const createOrder = async (order: Order) => {
     try {
@@ -79,25 +114,38 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const simulateBoxKeypadEntry = useCallback((orderId: string, inputCode: string) => {
-    const order = ordersRef.current.find(o => o.id === orderId);
-    if (!order) return false;
-    if (order.code === inputCode) {
+  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+    try {
+        await database.updateOrderStatus(orderId, status);
+    } catch (error) {
+        console.error(`Error actualizando estado:`, error);
+    }
+  };
+
+  const simulateBoxKeypadEntry = (orderId: string, inputCode: string) => {
+    if (inputCode === BOX_MASTER_CODE) {
       updateOrderStatus(orderId, 'delivered'); 
       return true;
     }
     return false;
-  }, [updateOrderStatus]);
+  };
 
-  const resetDatabase = useCallback(() => database.clearDatabase(), []);
-
-  const value = React.useMemo(() => ({
-    orders, createOrder, updateOrderStatus, simulateBoxKeypadEntry, 
-    resetDatabase, realTemps 
-  }), [orders, createOrder, updateOrderStatus, simulateBoxKeypadEntry, resetDatabase, realTemps]);
+  const resetDatabase = () => {
+      database.clearDatabase();
+  };
 
   return (
-    <MqttContext.Provider value={value}>
+    <MqttContext.Provider value={{ 
+        orders, 
+        createOrder, 
+        updateOrderStatus, 
+        simulateBoxKeypadEntry, 
+        resetDatabase, 
+        realTemps, 
+        lastPhysicalKeyPress,
+        physicalBuffer,
+        setPhysicalBuffer
+    }}>
       {children}
     </MqttContext.Provider>
   );
