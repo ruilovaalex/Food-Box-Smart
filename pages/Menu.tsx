@@ -61,7 +61,12 @@ export const Menu: React.FC = () => {
         </div>
         
         <div className="absolute bottom-4 right-10 z-20 hidden md:block animate-bounce-soft">
-            <img src="/images/calavera.gif" alt="" className="w-32 h-32 object-contain mix-blend-screen opacity-90" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            <img 
+                src="/images/calavera.gif" 
+                alt="" 
+                className="w-32 h-32 object-contain mix-blend-screen opacity-90" 
+                onError={(e) => { e.currentTarget.style.display = 'none'; }} 
+            />
         </div>
       </div>
 
