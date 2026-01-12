@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
 import { Order, OrderStatus } from '../types';
 import { database } from '../services/database';
 import { useAuth } from './AuthContext';
@@ -19,14 +19,21 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [realTemps, setRealTemps] = useState({ hot: 0, cold: 0 }); 
-  
   const ordersRef = useRef<Order[]>([]);
 
   useEffect(() => {
     ordersRef.current = orders;
   }, [orders]);
 
-  // Suscripción a Pedidos (Solo cuando hay usuario)
+  const updateOrderStatus = useCallback(async (orderId: string, status: OrderStatus) => {
+    try {
+        await database.updateOrderStatus(orderId, status);
+    } catch (error) {
+        console.error(`Error actualizando estado:`, error);
+    }
+  }, []);
+
+  // Suscripción a Pedidos
   useEffect(() => {
     if (!user) {
         setOrders([]);
@@ -44,17 +51,14 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Suscripción a Sensores (Solo para el Admin)
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
-
     const unsubSensors = database.subscribeToSensors(setRealTemps);
-    
-    return () => {
-        unsubSensors();
-    };
+    return () => unsubSensors();
   }, [user]);
 
-  // Worker de cocina
+  // Worker de cocina optimizado
   useEffect(() => {
     if (!user) return;
+    
     const kitchenTimer = setInterval(() => {
         const now = Date.now();
         ordersRef.current.forEach(order => {
@@ -62,10 +66,10 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 updateOrderStatus(order.id, 'ready');
             }
         });
-    }, 2000); 
+    }, 3000); 
 
     return () => clearInterval(kitchenTimer);
-  }, [user]); 
+  }, [user, updateOrderStatus]); 
 
   const createOrder = async (order: Order) => {
     try {
@@ -75,15 +79,7 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
-    try {
-        await database.updateOrderStatus(orderId, status);
-    } catch (error) {
-        console.error(`Error actualizando estado:`, error);
-    }
-  };
-
-  const simulateBoxKeypadEntry = (orderId: string, inputCode: string) => {
+  const simulateBoxKeypadEntry = useCallback((orderId: string, inputCode: string) => {
     const order = ordersRef.current.find(o => o.id === orderId);
     if (!order) return false;
     if (order.code === inputCode) {
@@ -91,15 +87,17 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return true;
     }
     return false;
-  };
+  }, [updateOrderStatus]);
 
-  const resetDatabase = () => database.clearDatabase();
+  const resetDatabase = useCallback(() => database.clearDatabase(), []);
+
+  const value = React.useMemo(() => ({
+    orders, createOrder, updateOrderStatus, simulateBoxKeypadEntry, 
+    resetDatabase, realTemps 
+  }), [orders, createOrder, updateOrderStatus, simulateBoxKeypadEntry, resetDatabase, realTemps]);
 
   return (
-    <MqttContext.Provider value={{ 
-        orders, createOrder, updateOrderStatus, simulateBoxKeypadEntry, 
-        resetDatabase, realTemps 
-    }}>
+    <MqttContext.Provider value={value}>
       {children}
     </MqttContext.Provider>
   );
