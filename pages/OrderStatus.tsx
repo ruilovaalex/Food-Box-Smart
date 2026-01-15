@@ -63,7 +63,7 @@ export const OrderStatusPage: React.FC = () => {
   // Lógica de "Fila Virtual": Si la caja está ocupada por otro usuario
   const isBoxBusyByOther = boxStatus.isOccupied && boxStatus.currentUserId !== user?.id;
 
-  // NUEVO: Verificación de código en tiempo real
+  // Verificación de código opcional (si el usuario decide usar el teclado físico)
   const isCodeMatched = keyBuffer === order.code;
 
   const handleConfirmDelivery = async () => {
@@ -107,36 +107,39 @@ export const OrderStatusPage: React.FC = () => {
                             <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-orange-400 to-primary animate-pulse" />
                             <h2 className="text-gray-400 font-medium uppercase tracking-widest text-xs mb-4">Código de Retiro</h2>
                             <div className={`text-7xl font-black transition-colors duration-300 tracking-widest font-mono mb-4 ${isCodeMatched ? 'text-green-500' : 'text-dark'}`}>
-                                {isCodeMatched ? keyBuffer : order.code}
+                                {isReady && isCodeMatched ? keyBuffer : order.code}
                             </div>
                             <div className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isCodeMatched ? 'bg-green-100 text-green-700 font-black' : isReady ? 'bg-orange-50 text-orange-600 font-bold' : 'bg-gray-100 text-gray-500'}`}>
-                                {isCodeMatched ? "✅ CÓDIGO CORRECTO" : isReady ? "✨ Digítalo en el teclado físico" : "⏳ Preparando tu orden..."}
+                                {isCodeMatched ? "✅ CÓDIGO DETECTADO" : isReady ? "✨ Tu pedido te espera en la caja" : "⏳ Estamos preparando tu comida..."}
                             </div>
                         </>
                     )}
                 </Card>
 
-                {/* BOTÓN DE CONFIRMACIÓN - Solo si el código coincide */}
-                {isCodeMatched && !isBoxBusyByOther && (
-                    <div className="animate-slide-up">
+                {/* BOTÓN DE CONFIRMACIÓN PRINCIPAL - Aparece cuando está listo sin obligar el código */}
+                {isReady && !isBoxBusyByOther && (
+                    <div className="animate-slide-up space-y-4">
                         <Button 
                             onClick={handleConfirmDelivery} 
                             isLoading={confirming}
                             fullWidth 
-                            className="bg-green-600 hover:bg-green-700 text-white text-lg py-5 shadow-2xl shadow-green-500/30 ring-4 ring-green-100"
+                            className="bg-primary hover:bg-orange-600 text-white text-lg py-6 shadow-2xl shadow-orange-500/30 ring-4 ring-orange-50"
+                            icon={<span className="text-2xl">🧺</span>}
                         >
-                            🧺 Confirmar Retiro y Abrir
+                            Abrir Food Box y Retirar
                         </Button>
-                        <p className="text-center text-[10px] text-gray-400 mt-3 font-bold uppercase tracking-widest">Presiona para desbloquear el Food Box</p>
+                        <p className="text-center text-[10px] text-gray-400 font-bold uppercase tracking-widest animate-pulse">
+                            ¡Presiona el botón para desbloquear la puerta!
+                        </p>
                     </div>
                 )}
 
-                {isReady && !isCodeMatched && !isBoxBusyByOther && (
-                    <div className="space-y-4 animate-fade-in">
+                {isReady && !isBoxBusyByOther && (
+                    <div className="space-y-4 animate-fade-in pt-4">
                         <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 flex items-center gap-3">
                             <span className="text-2xl">💡</span>
                             <p className="text-xs text-blue-700 font-medium">
-                                Al abrir la puerta única, retira tus productos de las zonas: <br/>
+                                Al abrir la puerta, retira tus productos de las zonas: <br/>
                                 <span className="font-bold">{hasHot ? '🔥 Caliente' : ''} {hasHot && hasCold ? 'y' : ''} {hasCold ? '❄️ Fría' : ''}</span>
                             </p>
                         </div>
@@ -146,26 +149,36 @@ export const OrderStatusPage: React.FC = () => {
                         </div>
                     </div>
                 )}
+
+                {isPending && (
+                    <div className="text-center p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 border-dashed">
+                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm text-2xl">👨‍🍳</div>
+                        <p className="text-gray-500 text-sm font-medium">Mantendremos tu comida a la temperatura ideal hasta que llegues.</p>
+                    </div>
+                )}
              </div>
           ) : (
             <div className="w-full text-center animate-fade-in flex flex-col items-center">
                 <div className="text-6xl mb-4 animate-bounce-soft">🎉</div>
-                <h2 className="text-3xl font-black text-dark tracking-tight">¡Buen provecho!</h2>
-                <p className="text-gray-500 mt-2 mb-6">Tu pedido ha sido retirado.</p>
+                <h2 className="text-3xl font-black text-dark tracking-tight">¡Pedido Entregado!</h2>
+                <p className="text-gray-500 mt-2 mb-6 font-medium">Gracias por confiar en Food Box Smart.</p>
                 
-                <div className="w-full bg-white p-6 rounded-3xl shadow-sm border border-gray-100 mb-8">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Resumen de retiro</h3>
-                    <div className="space-y-3">
+                <div className="w-full bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 mb-8">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 border-b border-gray-50 pb-3">Resumen de tu retiro</h3>
+                    <div className="space-y-4">
                         {order.items.map((item, i) => (
-                            <div key={i} className="flex justify-between items-center text-sm">
-                                <span className="text-gray-600 font-medium">{item.name}</span>
+                            <div key={i} className="flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-xs font-bold">{item.quantity}x</div>
+                                    <span className="text-dark font-bold text-sm">{item.name}</span>
+                                </div>
                                 <Badge type={item.type} className="scale-75" />
                             </div>
                         ))}
                     </div>
                 </div>
 
-                <Button onClick={() => navigate('/menu')} variant="secondary" className="w-full">Ir al Menú</Button>
+                <Button onClick={() => navigate('/menu')} variant="secondary" className="w-full py-4 !rounded-2xl">Volver al Menú</Button>
             </div>
           )}
        </div>
