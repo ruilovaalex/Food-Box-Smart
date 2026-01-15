@@ -1,3 +1,4 @@
+
 export type ProductType = 'hot' | 'cold';
 
 export interface Product {
@@ -6,6 +7,7 @@ export interface Product {
   price: number;
   type: ProductType;
   image: string;
+  isAvailable?: boolean; // Campo opcional para disponibilidad
 }
 
 export interface CartItem extends Product {
@@ -17,21 +19,21 @@ export type OrderStatus = 'pending' | 'paid' | 'ready' | 'delivered' | 'cancelle
 export interface Order {
   id: string;
   userId: string;
-  userEmail?: string; // Nuevo campo para guardar el correo visible
+  userEmail?: string; 
   items: CartItem[];
   total: number;
   status: OrderStatus;
-  code: string; // 4 digit code
+  code: string; 
   createdAt: number;
   customerDetails?: {
     name: string;
     phone: string;
     paymentMethod: 'cash' | 'card';
   };
-  simulatedTemps?: {
-    hot: number;
-    cold: number;
-  };
+}
+
+export interface InventoryStatus {
+  [productId: string]: boolean;
 }
 
 export interface User {

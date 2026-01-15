@@ -1,7 +1,7 @@
 
 import { db } from './firebase';
 import { collection, doc, setDoc, updateDoc, onSnapshot, query, where, writeBatch, getDocs, deleteDoc } from "firebase/firestore";
-import { Order, OrderStatus } from '../types';
+import { Order, OrderStatus, InventoryStatus } from '../types';
 
 const ORDERS_COLLECTION = 'orders';
 const SYSTEM_COLLECTION = 'system';
@@ -37,7 +37,22 @@ export const database = {
      });
   },
 
-  // Simulación desde Admin
+  subscribeToInventory: (callback: (inventory: InventoryStatus) => void) => {
+    return onSnapshot(doc(db, SYSTEM_COLLECTION, 'inventory'), (docSnap) => {
+      if (docSnap.exists()) {
+        callback(docSnap.data() as InventoryStatus);
+      } else {
+        callback({});
+      }
+    });
+  },
+
+  updateProductAvailability: async (productId: number, isAvailable: boolean) => {
+    await setDoc(doc(db, SYSTEM_COLLECTION, 'inventory'), {
+      [productId.toString()]: isAvailable
+    }, { merge: true });
+  },
+
   updateSensors: async (hot: number, cold: number) => {
     await setDoc(doc(db, SYSTEM_COLLECTION, 'sensors'), { hot, cold, lastUpdate: Date.now() }, { merge: true });
   },
@@ -71,7 +86,6 @@ export const database = {
     });
   },
 
-  // Simular presión de tecla física
   sendKeypress: async (key: string) => {
     await setDoc(doc(db, SYSTEM_COLLECTION, 'keypad_test'), {
         key,
@@ -80,8 +94,7 @@ export const database = {
   },
 
   addOrder: async (order: Order) => {
-    const { simulatedTemps, ...orderData } = order;
-    await setDoc(doc(db, ORDERS_COLLECTION, order.id), orderData);
+    await setDoc(doc(db, ORDERS_COLLECTION, order.id), order);
   },
 
   updateOrderStatus: async (orderId: string, status: OrderStatus) => {
@@ -94,7 +107,6 @@ export const database = {
     snapshot.docs.forEach((doc) => batch.delete(doc.ref));
     await batch.commit();
     
-    // Reset system states
     await setDoc(doc(db, SYSTEM_COLLECTION, 'sensors'), { hot: 65, cold: 4 });
     await setDoc(doc(db, SYSTEM_COLLECTION, 'box_status'), { isOccupied: false, currentUserId: null });
     await deleteDoc(doc(db, SYSTEM_COLLECTION, 'keypad_test'));
