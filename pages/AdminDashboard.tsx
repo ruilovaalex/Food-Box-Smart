@@ -31,7 +31,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, sub, icon, colorClass
 );
 
 export const AdminDashboard: React.FC = () => {
-    const { orders, resetDatabase, realTemps, boxStatus, physicalKeyPress, keyBuffer, confirmOrderDelivery, inventory, toggleProduct } = useMqtt();
+    const { orders, resetDatabase, realTemps, boxStatus, keyBuffer, confirmOrderDelivery, inventory, toggleProduct } = useMqtt();
     const { logout, user } = useAuth();
     const navigate = useNavigate();
     
@@ -85,7 +85,6 @@ export const AdminDashboard: React.FC = () => {
     const readyOrders = orders.filter(o => o.status === 'ready');
     const matchingOrder = readyOrders.find(o => o.code === keyBuffer);
 
-    // Fix: Added handleResetDB to resolve the missing function error
     const handleResetDB = async () => {
         if (window.confirm('¿Estás seguro de que deseas resetear la base de datos? Esto eliminará todos los pedidos.')) {
             setIsResetting(true);
@@ -98,6 +97,11 @@ export const AdminDashboard: React.FC = () => {
                 setIsResetting(false);
             }
         }
+    };
+
+    const handleTempChange = async (type: 'hot' | 'cold', val: number) => {
+        const newTemps = { ...realTemps, [type]: val };
+        await database.updateSensors(newTemps.hot, newTemps.cold);
     };
 
     return (
@@ -149,7 +153,7 @@ export const AdminDashboard: React.FC = () => {
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                             <Card className="lg:col-span-2 p-8">
-                                <h3 className="font-bold text-lg mb-6 border-b pb-4">Top Clientes</h3>
+                                <h3 className="font-bold text-lg mb-6 border-b pb-4">Ranking de Clientes</h3>
                                 <div className="space-y-4">
                                     {stats.topCustomers.map(([name, data], i) => (
                                         <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
@@ -226,6 +230,48 @@ export const AdminDashboard: React.FC = () => {
                                 </Card>
                             ))}
                         </div>
+                    </div>
+                )}
+
+                {currentTab === 'sensors' && (
+                    <div className="animate-fade-in max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <Card className="p-8 flex flex-col items-center text-center bg-white">
+                            <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-4xl mb-6 shadow-sm">🔥</div>
+                            <h3 className="text-gray-400 font-black uppercase tracking-widest text-xs mb-2">Zona Caliente</h3>
+                            <div className="text-6xl font-black text-red-600 mb-8 tabular-nums">{realTemps.hot}°C</div>
+                            <div className="w-full space-y-4">
+                                <p className="text-xs text-gray-500 font-medium italic">Simular Temperatura</p>
+                                <input 
+                                    type="range" min="40" max="90" step="1" 
+                                    value={realTemps.hot} 
+                                    onChange={(e) => handleTempChange('hot', parseInt(e.target.value))}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-500"
+                                />
+                                <div className="flex justify-between text-[10px] font-bold text-gray-300">
+                                    <span>40°C</span>
+                                    <span>90°C</span>
+                                </div>
+                            </div>
+                        </Card>
+
+                        <Card className="p-8 flex flex-col items-center text-center bg-white">
+                            <div className="w-20 h-20 bg-teal-50 text-teal-500 rounded-full flex items-center justify-center text-4xl mb-6 shadow-sm">❄️</div>
+                            <h3 className="text-gray-400 font-black uppercase tracking-widest text-xs mb-2">Zona Fría</h3>
+                            <div className="text-6xl font-black text-teal-600 mb-8 tabular-nums">{realTemps.cold}°C</div>
+                            <div className="w-full space-y-4">
+                                <p className="text-xs text-gray-500 font-medium italic">Simular Temperatura</p>
+                                <input 
+                                    type="range" min="-10" max="15" step="1" 
+                                    value={realTemps.cold} 
+                                    onChange={(e) => handleTempChange('cold', parseInt(e.target.value))}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-teal-500"
+                                />
+                                <div className="flex justify-between text-[10px] font-bold text-gray-300">
+                                    <span>-10°C</span>
+                                    <span>15°C</span>
+                                </div>
+                            </div>
+                        </Card>
                     </div>
                 )}
 
