@@ -30,29 +30,24 @@ export const Menu: React.FC = () => {
       setTimeout(() => setAddedNotification(null), 2000);
   };
 
-  // Fallback images in case local upload fails
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>, type: string) => {
       const target = e.currentTarget;
-      target.onerror = null; // Prevent infinite loop
-      // Fallback icons from CDN
+      target.onerror = null;
       if (type === 'hot') {
-          target.src = "https://cdn-icons-png.flaticon.com/512/3075/3075977.png"; // Burger icon
+          target.src = "https://cdn-icons-png.flaticon.com/512/3075/3075977.png";
       } else {
-          target.src = "https://cdn-icons-png.flaticon.com/512/938/938063.png"; // Ice cream icon
+          target.src = "https://cdn-icons-png.flaticon.com/512/938/938063.png";
       }
   };
 
   return (
     <PageLayout className="bg-[#F8F9FD]">
       
-      {/* --- HERO HEADER ORGANICO --- */}
       <div className="relative bg-primary pt-8 pb-16 px-6 rounded-b-[3rem] shadow-xl shadow-orange-500/20 mb-8 overflow-hidden">
-        {/* Background Decorations */}
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary to-orange-600"></div>
         <div className="absolute -top-24 -right-24 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-10 w-32 h-32 bg-yellow-400 opacity-20 rounded-full blur-2xl"></div>
 
-        {/* Top Navigation */}
         <div className="relative z-10 flex justify-between items-start mb-8">
             <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30 text-2xl shadow-lg">
@@ -79,25 +74,25 @@ export const Menu: React.FC = () => {
             </div>
         </div>
 
-        {/* Search/Title Area */}
         <div className="relative z-10 mb-6">
             <h2 className="text-3xl font-bold text-white leading-tight">
-                ¿Qué se te antoja <br/> <span className="opacity-80 font-normal">comer hoy?</span>
+                Food Box Smart <br/> <span className="opacity-80 font-normal">Tu comida fresca y lista.</span>
             </h2>
         </div>
         
-        {/* GIF Calavera - Visible solo en PC, alineado a la derecha */}
         <div className="absolute bottom-4 right-10 z-20 hidden md:block animate-bounce-soft">
             <img 
                 src="/images/calavera.gif" 
                 alt="Fun" 
                 className="w-32 h-32 object-contain opacity-90 drop-shadow-lg mix-blend-screen"
-                onError={(e) => e.currentTarget.style.display = 'none'}
+                onError={(e) => {
+                    const target = e.currentTarget;
+                    target.src = "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJndXhsemVndXhsemVndXhsemVndXhsemVndXhsemVndXhsemVndSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/3o7TKMGpxV3LxlZ4v6/giphy.gif";
+                }}
             />
         </div>
       </div>
 
-      {/* --- CATEGORY TABS (Floating) --- */}
       <div className="px-6 -mt-14 mb-8 relative z-20 flex justify-center">
          <div className="bg-white p-2 rounded-2xl shadow-xl shadow-gray-200/50 flex gap-2 overflow-x-auto no-scrollbar border border-gray-100">
             {[
@@ -121,7 +116,6 @@ export const Menu: React.FC = () => {
          </div>
       </div>
 
-      {/* --- PRODUCT GRID --- */}
       <div className="px-6 pb-32 max-w-7xl mx-auto">
         <h3 className="font-bold text-dark text-lg mb-4 flex items-center gap-2">
             Resultados <span className="text-gray-400 text-sm font-normal">({filteredProducts.length})</span>
@@ -131,17 +125,13 @@ export const Menu: React.FC = () => {
             {filteredProducts.map(product => (
             <Card key={product.id} className="flex flex-col h-full group !rounded-[2rem] border-0 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.05)] overflow-hidden">
                 <div className="relative h-64 p-4 bg-white flex items-center justify-center overflow-hidden">
-                    {/* Background blob for product hover effect */}
                     <div className="absolute w-full h-full bg-orange-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                    
-                    {/* IMAGEN DE PRODUCTO MEJORADA: object-cover para llenar el cuadro + redondeado */}
                     <img 
                         src={product.image} 
                         alt={product.name} 
                         onError={(e) => handleImageError(e, product.type)}
                         className="w-full h-full object-cover rounded-2xl shadow-sm transition-transform duration-700 group-hover:scale-105 relative z-10" 
                     />
-                    
                     <div className="absolute top-6 left-6 z-20">
                         <Badge type={product.type} className="shadow-lg backdrop-blur-md bg-white/95" />
                     </div>
@@ -185,7 +175,6 @@ export const Menu: React.FC = () => {
         </div>
       </div>
 
-      {/* --- TOAST NOTIFICATION --- */}
       {addedNotification && (
           <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 animate-fade-in pointer-events-none">
               <div className="bg-gray-900/90 backdrop-blur-md text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-white/10">
@@ -199,7 +188,6 @@ export const Menu: React.FC = () => {
           </div>
       )}
 
-      {/* --- FLOATING CART BAR --- */}
       {items.length > 0 && (
         <div className="fixed bottom-6 left-6 right-6 z-40 max-w-md mx-auto animate-slide-up">
            <div 

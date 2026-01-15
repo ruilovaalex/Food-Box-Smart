@@ -6,11 +6,13 @@ import { useAuth } from './AuthContext';
 
 interface MqttContextType {
   orders: Order[];
-  createOrder: (order: Order) => void;
+  createOrder: (order: Order) => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   simulateBoxKeypadEntry: (orderId: string, code: string) => boolean;
   resetDatabase: () => void;
   realTemps: { hot: number, cold: number };
+  physicalKeyPress: { key: string, timestamp: number } | null;
+  boxStatus: { isOccupied: boolean, currentUserId: string | null };
 }
 
 const MqttContext = createContext<MqttContextType | undefined>(undefined);
@@ -18,76 +20,93 @@ const MqttContext = createContext<MqttContextType | undefined>(undefined);
 export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
-  const [realTemps, setRealTemps] = useState({ hot: 0, cold: 0 }); 
+  const [realTemps, setRealTemps] = useState({ hot: 65, cold: 4 }); 
+  const [physicalKeyPress, setPhysicalKeyPress] = useState<{ key: string, timestamp: number } | null>(null);
+  const [boxStatus, setBoxStatus] = useState({ isOccupied: false, currentUserId: null as string | null });
+  const [keyBuffer, setKeyBuffer] = useState('');
   
   const ordersRef = useRef<Order[]>([]);
+  useEffect(() => { ordersRef.current = orders; }, [orders]);
 
+  // 1. Pedidos
   useEffect(() => {
-    ordersRef.current = orders;
-  }, [orders]);
-
-  // Suscripción a Pedidos (Solo cuando hay usuario)
-  useEffect(() => {
-    if (!user) {
-        setOrders([]);
-        return;
-    }
-
-    const unsubscribe = database.subscribeToOrders(
-        (newOrders) => setOrders(newOrders),
-        user.id,
-        user.role === 'admin'
-    );
-    return () => unsubscribe();
+    if (!user) return;
+    const unsub = database.subscribeToOrders(setOrders, user.id, user.role === 'admin');
+    return () => unsub();
   }, [user]);
 
-  // Suscripción a Sensores (Solo para el Admin)
+  // 2. Sensores, Teclado y Estado de la Caja
   useEffect(() => {
-    if (!user || user.role !== 'admin') return;
+    if (!user) return;
 
     const unsubSensors = database.subscribeToSensors(setRealTemps);
+    const unsubBoxStatus = database.subscribeToBoxStatus(setBoxStatus);
+
+    const unsubKeypad = database.subscribeToKeypad((data) => {
+        setPhysicalKeyPress(data);
+        if (!data.key) return;
+
+        if (data.key === '*' || data.key === '#') {
+            setKeyBuffer('');
+        } else {
+            setKeyBuffer(prev => {
+                const newBuf = (prev + data.key).slice(-4);
+                const matchingOrder = ordersRef.current.find(o => o.status === 'ready' && o.code === newBuf);
+                
+                if (matchingOrder) {
+                    // Marcamos como ocupado físicamente por seguridad mientras se retira
+                    database.updateBoxStatus(true, matchingOrder.userId);
+                    updateOrderStatus(matchingOrder.id, 'delivered');
+                    
+                    // Liberar automáticamente tras el tiempo de retiro
+                    setTimeout(() => {
+                        database.updateBoxStatus(false, null);
+                    }, 8000);
+                    
+                    return ''; 
+                }
+                return newBuf;
+            });
+        }
+    });
     
     return () => {
         unsubSensors();
+        unsubKeypad();
+        unsubBoxStatus();
     };
   }, [user]);
 
-  // Worker de cocina
+  // 3. Simulación de Cocina
   useEffect(() => {
     if (!user) return;
-    const kitchenTimer = setInterval(() => {
+    const timer = setInterval(() => {
         const now = Date.now();
         ordersRef.current.forEach(order => {
-            if (order.status === 'pending' && (now - order.createdAt > 5000)) {
+            if (order.status === 'pending' && (now - order.createdAt > 4000)) {
                 updateOrderStatus(order.id, 'ready');
             }
         });
     }, 2000); 
-
-    return () => clearInterval(kitchenTimer);
+    return () => clearInterval(timer);
   }, [user]); 
 
   const createOrder = async (order: Order) => {
-    try {
-        await database.addOrder(order);
-    } catch (error) {
-        console.error("Error creando orden:", error);
-    }
+    // AUTOMÁTICO: Marcar caja como ocupada al crear pedido
+    await database.updateBoxStatus(true, order.userId);
+    await database.addOrder(order);
   };
 
-  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
-    try {
-        await database.updateOrderStatus(orderId, status);
-    } catch (error) {
-        console.error(`Error actualizando estado:`, error);
-    }
-  };
+  const updateOrderStatus = (orderId: string, status: OrderStatus) => database.updateOrderStatus(orderId, status);
 
   const simulateBoxKeypadEntry = (orderId: string, inputCode: string) => {
     const order = ordersRef.current.find(o => o.id === orderId);
-    if (!order) return false;
-    if (order.code === inputCode) {
+    if (order && order.code === inputCode) {
+      database.updateBoxStatus(true, order.userId);
       updateOrderStatus(orderId, 'delivered'); 
+      setTimeout(() => {
+          database.updateBoxStatus(false, null);
+      }, 8000);
       return true;
     }
     return false;
@@ -98,7 +117,7 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return (
     <MqttContext.Provider value={{ 
         orders, createOrder, updateOrderStatus, simulateBoxKeypadEntry, 
-        resetDatabase, realTemps 
+        resetDatabase, realTemps, physicalKeyPress, boxStatus
     }}>
       {children}
     </MqttContext.Provider>

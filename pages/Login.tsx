@@ -16,11 +16,13 @@ export const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Load assets safely
-  let logoUrl = '/images/logo.png';
-  let gifUrl = '/images/calavera.gif';
+  // Rutas según repositorio
+  const logoUrl = 'images/logo.png';
+  const gifUrl = 'images/calavera.gif';
+  
+  const [logoError, setLogoError] = useState(false);
+  const [gifVisible, setGifVisible] = useState(true);
 
-  // Efecto visual para cambiar el título
   const [greeting, setGreeting] = useState('');
   useEffect(() => {
     const hours = new Date().getHours();
@@ -36,30 +38,15 @@ export const Login: React.FC = () => {
 
     try {
         if (isAdminMode) {
-            // Normalizar el email de admin
             const adminEmail = email.toLowerCase().includes('@') ? email.toLowerCase() : `${email.toLowerCase()}@foodbox.com`;
-            
             try {
-                // Intentar login primero
                 await login(adminEmail, password);
             } catch (loginErr: any) {
-                // Firebase modernizó los errores: auth/invalid-credential ahora engloba varios casos
                 const isPossibleNewUser = 
                     loginErr.code === 'auth/user-not-found' || 
-                    loginErr.code === 'auth/invalid-credential' || 
-                    loginErr.code === 'auth/invalid-login-credentials';
-
+                    loginErr.code === 'auth/invalid-credential';
                 if (isPossibleNewUser) {
-                    try {
-                        // Intentamos registrar si no existe
-                        await register("Administrador", adminEmail, password);
-                    } catch (regErr: any) {
-                        // Si ya existe pero dio error arriba, la contraseña está mal
-                        if (regErr.code === 'auth/email-already-in-use') {
-                            throw new Error("Contraseña incorrecta para el administrador.");
-                        }
-                        throw regErr;
-                    }
+                    await register("Administrador", adminEmail, password);
                 } else {
                     throw loginErr;
                 }
@@ -73,15 +60,11 @@ export const Login: React.FC = () => {
             }
         }
     } catch (err: any) {
-        console.error("Auth Error:", err.code, err.message);
         let msg = "Error de acceso.";
         if (err.code === 'auth/invalid-email') msg = "Correo inválido.";
-        if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-            msg = "Credenciales incorrectas.";
-        }
+        if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') msg = "Credenciales incorrectas.";
         if (err.code === 'auth/email-already-in-use') msg = "Este correo ya está registrado.";
-        if (err.message) msg = err.message; // Usar el mensaje personalizado si existe
-        
+        if (err.message) msg = err.message;
         setError(msg);
         setLoading(false);
     }
@@ -124,28 +107,36 @@ export const Login: React.FC = () => {
                 </div>
              </div>
 
-             <div className="relative z-10 mb-4 md:mb-8 transform hover:scale-105 transition-transform duration-500 group cursor-pointer">
-                <img 
-                    src={logoUrl}
-                    alt="Food Box Logo" 
-                    className="w-32 h-32 md:w-56 md:h-56 lg:w-72 lg:h-72 object-contain drop-shadow-2xl relative z-10" 
-                    onError={(e) => e.currentTarget.style.display = 'none'}
-                />
+             <div className="relative z-10 mb-4 md:mb-8 transform hover:scale-105 transition-transform duration-500 group cursor-pointer flex items-center justify-center">
+                {!logoError ? (
+                    <img 
+                        src={logoUrl}
+                        alt="Food Box Smart Logo" 
+                        className="w-32 h-32 md:w-56 md:h-56 lg:w-72 lg:h-72 object-contain drop-shadow-2xl relative z-10" 
+                        onError={() => setLogoError(true)}
+                    />
+                ) : (
+                    <div className="w-32 h-32 md:w-56 md:h-56 lg:w-72 lg:h-72 flex items-center justify-center text-7xl md:text-9xl drop-shadow-2xl">
+                        🍔
+                    </div>
+                )}
              </div>
              
-             <h1 className="relative z-10 text-3xl md:text-4xl lg:text-5xl font-black text-white mb-2 tracking-tight">Food Box</h1>
+             <h1 className="relative z-10 text-3xl md:text-4xl lg:text-5xl font-black text-white mb-2 tracking-tight">Food Box Smart</h1>
              <p className="relative z-10 text-white/90 text-sm md:text-lg font-medium">
                 {isAdminMode ? 'Panel de Administración' : 'Tu comida favorita, sin filas.'}
              </p>
 
-             <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-20 opacity-90 animate-bounce-soft">
-                <img 
-                    src={gifUrl}
-                    alt="Fun" 
-                    className="w-20 h-20 md:w-28 md:h-28 lg:w-36 lg:h-36 object-contain drop-shadow-lg mix-blend-screen"
-                    onError={(e) => e.currentTarget.style.display = 'none'}
-                />
-             </div>
+             {gifVisible && (
+                <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-20 opacity-90 animate-bounce-soft">
+                    <img 
+                        src={gifUrl}
+                        alt="Fun" 
+                        className="w-20 h-20 md:w-28 md:h-28 lg:w-36 lg:h-36 object-contain drop-shadow-lg mix-blend-screen"
+                        onError={() => setGifVisible(false)}
+                    />
+                </div>
+             )}
         </div>
 
         <div className="md:w-[55%] p-6 md:p-8 lg:p-14 flex flex-col justify-center bg-white relative">

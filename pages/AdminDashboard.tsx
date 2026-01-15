@@ -1,10 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useMqtt } from '../context/MqttContext';
 import { useAuth } from '../context/AuthContext';
 import { Card, Button, PageLayout, Badge, Input } from '../components/UI';
 import { useNavigate } from 'react-router-dom';
 import { Order } from '../types';
+import { database } from '../services/database';
 
 type TabView = 'dashboard' | 'history' | 'simulator' | 'sensors';
 
@@ -15,7 +16,7 @@ interface StatCardProps {
     value: string | number;
     sub: string;
     icon: string;
-    colorClass: string; // Ej: from-blue-500 to-blue-600
+    colorClass: string;
 }
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, sub, icon, colorClass }) => (
@@ -34,12 +35,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, sub, icon, colorClass
     </div>
 );
 
-interface OrderRowCardProps {
-    order: Order;
-    onViewDetails: (order: Order) => void;
-}
-
-const OrderRowCard: React.FC<OrderRowCardProps> = ({ order, onViewDetails }) => {
+const OrderRowCard: React.FC<{ order: Order; onViewDetails: (order: Order) => void }> = ({ order, onViewDetails }) => {
     const displayName = order.customerDetails?.name || order.userId;
     const isReady = order.status === 'ready';
     
@@ -55,10 +51,6 @@ const OrderRowCard: React.FC<OrderRowCardProps> = ({ order, onViewDetails }) => 
                     <div>
                         <h4 className="font-bold text-dark text-sm">{displayName}</h4>
                         <p className="text-xs text-gray-400 font-mono">{order.id}</p>
-                        <p className="text-[10px] text-gray-400 mt-1 font-medium flex items-center gap-1">
-                           <span>📅</span>
-                           {new Date(order.createdAt).toLocaleDateString()} • {new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                        </p>
                     </div>
                 </div>
                 <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
@@ -70,7 +62,6 @@ const OrderRowCard: React.FC<OrderRowCardProps> = ({ order, onViewDetails }) => 
                     {order.status === 'pending' && '⏳ Pendiente'}
                     {order.status === 'ready' && '⚡ Listo'}
                     {order.status === 'delivered' && '✓ Entregado'}
-                    {order.status === 'cancelled' && '✕ Cancelado'}
                 </div>
             </div>
 
@@ -95,15 +86,8 @@ const OrderRowCard: React.FC<OrderRowCardProps> = ({ order, onViewDetails }) => 
     );
 };
 
-interface OrderDetailModalProps {
-    order: Order;
-    onClose: () => void;
-}
-
-const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) => {
+const OrderDetailModal: React.FC<{ order: Order; onClose: () => void }> = ({ order, onClose }) => {
     if (!order) return null;
-    const hasHot = order.items ? order.items.some(i => i.type === 'hot') : false;
-    const hasCold = order.items ? order.items.some(i => i.type === 'cold') : false;
     const displayName = order.customerDetails?.name || 'Cliente';
     const displayEmail = order.userEmail || order.userId || 'No registrado';
 
@@ -121,18 +105,12 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) =
                     <div className="bg-white rounded-[2rem] p-6 shadow-lg mb-6 text-center">
                          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Código de Retiro</p>
                          <h2 className="text-6xl font-black text-primary font-mono tracking-widest mb-2">{order.code}</h2>
-                         
-                         <p className="text-xs text-gray-500 mb-3 font-medium">
-                            {new Date(order.createdAt).toLocaleDateString()} • {new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                         </p>
-
                          <div className={`inline-block px-3 py-1 rounded-lg text-xs font-bold ${order.status === 'ready' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}`}>
                             {order.status === 'ready' ? 'Esperando retiro' : order.status}
                          </div>
                     </div>
 
                     <div className="space-y-6 max-h-[50vh] overflow-y-auto custom-scrollbar pr-2">
-                        {/* Cliente Info */}
                         <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
                             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm">👤</div>
                             <div className="overflow-hidden">
@@ -140,8 +118,6 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) =
                                 <p className="text-sm text-gray-500 truncate">{displayEmail}</p>
                             </div>
                         </div>
-
-                        {/* Productos */}
                         <div>
                             <h4 className="text-sm font-bold text-dark mb-3 ml-2">Productos</h4>
                             <div className="space-y-2">
@@ -156,8 +132,6 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) =
                                 ))}
                             </div>
                         </div>
-
-                        {/* Totales */}
                         <div className="flex justify-between items-center bg-dark text-white p-5 rounded-2xl shadow-lg shadow-gray-400/50">
                             <span className="font-medium">Total Pagado</span>
                             <span className="text-2xl font-black text-green-400">${(order.total || 0).toFixed(2)}</span>
@@ -170,72 +144,39 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) =
 }
 
 export const AdminDashboard: React.FC = () => {
-    const { orders, simulateBoxKeypadEntry, resetDatabase, realTemps } = useMqtt();
+    const { orders, resetDatabase, realTemps, boxStatus, physicalKeyPress } = useMqtt();
     const { logout, user } = useAuth();
     const navigate = useNavigate();
     
     const [currentTab, setCurrentTab] = useState<TabView>('dashboard');
-    const [simulatedKeypadInput, setSimulatedKeypadInput] = useState('');
-    const [selectedOrderIdForSim, setSelectedOrderIdForSim] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedOrderDetails, setSelectedOrderDetails] = useState<Order | null>(null);
     const [isResetting, setIsResetting] = useState(false);
 
     // --- Stats Logic ---
     const totalIncome = orders.reduce((acc, o) => acc + (o.status !== 'cancelled' ? (o.total || 0) : 0), 0);
-    const completedOrders = orders.filter(o => o.status !== 'cancelled').length;
+    const completedOrders = orders.filter(o => o.status === 'delivered').length;
     const totalItemsSold = orders.reduce((acc, o) => acc + (o.status !== 'cancelled' && o.items ? o.items.reduce((s, i) => s + i.quantity, 0) : 0), 0);
-    const ordersToday = orders.filter(o => {
-        if (!o.createdAt) return false;
-        const d = new Date(o.createdAt);
-        const t = new Date();
-        return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear();
-    }).length;
-
-    const productStats: Record<string, {name: string, count: number, revenue: number}> = {};
-    orders.forEach(o => {
-        if(o.status !== 'cancelled' && o.items) {
-            o.items.forEach(item => {
-                if(!productStats[item.name]) productStats[item.name] = { name: item.name, count: 0, revenue: 0 };
-                productStats[item.name].count += item.quantity;
-                productStats[item.name].revenue += (item.price * item.quantity);
-            });
-        }
-    });
-    const topProducts = Object.values(productStats).sort((a,b) => b.count - a.count).slice(0, 3);
-
+    
     const filteredOrders = orders.filter(o => {
         const term = searchTerm.toLowerCase();
         return (o.id || '').toLowerCase().includes(term) || 
                (o.code || '').includes(term) ||
-               (o.customerDetails?.name || '').toLowerCase().includes(term) ||
-               (o.userEmail || '').toLowerCase().includes(term);
+               (o.customerDetails?.name || '').toLowerCase().includes(term);
     }).sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
 
+    // Órdenes que están esperando ser abiertas (estatus 'ready')
+    const readyOrders = orders.filter(o => o.status === 'ready');
 
-    // --- Handlers ---
-    const handleSimulateKeypad = (e: React.FormEvent) => {
-        e.preventDefault();
-        if(!selectedOrderIdForSim) return;
-        const success = simulateBoxKeypadEntry(selectedOrderIdForSim, simulatedKeypadInput);
-        if (success) {
-            alert("✅ ¡Caja Abierta Exitosamente!");
-            setSimulatedKeypadInput('');
-            setSelectedOrderIdForSim(null);
-        } else {
-            alert("❌ Código Incorrecto.");
-        }
+    const handleKeypress = async (key: string) => {
+        await database.sendKeypress(key);
     };
 
     const handleResetDB = async () => {
-        if(window.confirm("ATENCIÓN: Esto borrará todo el historial de pedidos permanentemente. ¿Estás seguro?")) {
+        if(window.confirm("ATENCIÓN: Esto borrará todo el historial permanentemente. ¿Estás seguro?")) {
             setIsResetting(true);
             try {
                 await resetDatabase();
-                alert("✅ Historial de base de datos eliminado correctamente.");
-            } catch (err: any) {
-                console.error(err);
-                alert("❌ Ocurrió un error al intentar limpiar la base de datos.");
             } finally {
                 setIsResetting(false);
             }
@@ -245,358 +186,169 @@ export const AdminDashboard: React.FC = () => {
     return (
         <PageLayout className="bg-[#F3F4F6]">
             
-            {/* --- ADMIN HEADER --- */}
             <div className="bg-dark text-white rounded-b-[3rem] pt-8 pb-12 px-6 shadow-2xl relative overflow-hidden mb-8">
                  <div className="absolute top-0 right-0 w-96 h-96 bg-primary opacity-20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-                 <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500 opacity-10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
-                 
                  <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6 max-w-7xl mx-auto">
                      <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 text-3xl shadow-lg">
-                            🛡️
-                        </div>
+                        <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 text-3xl">🛡️</div>
                         <div>
-                            <h2 className="text-gray-400 font-bold text-xs uppercase tracking-widest mb-1">Panel de Control</h2>
-                            <h1 className="text-3xl font-black tracking-tight">Hola, {user?.name}</h1>
+                            <h2 className="text-gray-400 font-bold text-xs uppercase tracking-widest mb-1">Panel de Control Admin</h2>
+                            <h1 className="text-3xl font-black tracking-tight">Food Box Smart</h1>
                         </div>
                      </div>
-                     
-                     <div className="flex items-center gap-3">
-                         <div className="hidden md:block text-right mr-4">
-                             <p className="text-xs text-gray-400 font-bold">{new Date().toLocaleDateString()}</p>
-                             <p className="text-xs text-gray-500">Estado: En línea 🟢</p>
-                         </div>
-                         <Button 
-                            variant="secondary"
-                            onClick={() => { logout(); navigate('/'); }} 
-                            className="!bg-white/10 !border-white/10 !text-white hover:!bg-red-500 hover:!border-red-500 shadow-lg"
-                            icon={<span>🚪</span>}
-                         >
-                            Salir
-                         </Button>
+                     <div className="flex gap-3">
+                        <span className="hidden md:flex items-center text-sm font-bold text-gray-400 mr-2">Admin: {user?.name}</span>
+                        <Button variant="secondary" onClick={() => { logout(); navigate('/'); }} className="!bg-white/10 !border-white/10 !text-white hover:!bg-red-500 shadow-lg">Salir</Button>
                      </div>
                  </div>
             </div>
 
-            {/* --- NAVIGATION TABS --- */}
             <div className="max-w-7xl mx-auto px-6 -mt-16 relative z-20 mb-10">
-                <div className="bg-white p-2 rounded-2xl shadow-xl shadow-gray-900/5 inline-flex gap-2 overflow-x-auto">
+                <div className="bg-white p-2 rounded-2xl shadow-xl flex gap-2 overflow-x-auto no-scrollbar">
                     {[
                         { id: 'dashboard', label: 'Resumen', icon: '📊' },
                         { id: 'history', label: 'Historial', icon: '📜' },
-                        { id: 'simulator', label: 'Simulador Web', icon: '🎛️' },
-                        { id: 'sensors', label: 'Sensores', icon: '🌡️' },
+                        { id: 'simulator', label: 'Teclado IoT', icon: '⌨️' },
+                        { id: 'sensors', label: 'Monitoreo Real', icon: '🌡️' },
                     ].map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setCurrentTab(tab.id as TabView)}
-                            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 whitespace-nowrap ${
-                                currentTab === tab.id 
-                                ? 'bg-dark text-white shadow-lg shadow-gray-900/20 scale-105' 
-                                : 'text-gray-400 hover:bg-gray-50 hover:text-dark'
+                            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all ${
+                                currentTab === tab.id ? 'bg-dark text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'
                             }`}
                         >
-                            <span>{tab.icon}</span> <span className="hidden sm:inline">{tab.label}</span>
+                            <span>{tab.icon}</span> <span>{tab.label}</span>
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* --- MAIN CONTENT --- */}
             <div className="max-w-7xl mx-auto px-6 pb-20">
                 
-                {/* 1. DASHBOARD VIEW */}
                 {currentTab === 'dashboard' && (
-                    <div className="animate-fade-in space-y-8">
-                        {/* Stats Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                             <StatCard 
-                                title="Ingresos" 
-                                value={`$${totalIncome.toFixed(2)}`} 
-                                sub="Acumulado Total"
-                                icon="💰"
-                                colorClass="from-yellow-400 to-orange-500"
-                             />
-                             <StatCard 
-                                title="Pedidos" 
-                                value={completedOrders} 
-                                sub="Completados"
-                                icon="🛒"
-                                colorClass="from-blue-400 to-indigo-500"
-                             />
-                             <StatCard 
-                                title="Productos" 
-                                value={totalItemsSold} 
-                                sub="Unidades vendidas"
-                                icon="📦"
-                                colorClass="from-orange-400 to-red-500"
-                             />
-                             <StatCard 
-                                title="Hoy" 
-                                value={ordersToday} 
-                                sub="Nuevas órdenes"
-                                icon="📅"
-                                colorClass="from-teal-400 to-green-500"
-                             />
-                        </div>
-
-                        {/* Top Products Section */}
-                        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
-                            <div className="flex items-center justify-between mb-8">
-                                <h3 className="text-xl font-black text-dark flex items-center gap-2">
-                                    <span>🏆</span> Productos Estrella
-                                </h3>
-                                <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-bold">Top 3</span>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                {topProducts.map((prod, idx) => (
-                                    <div key={idx} className="relative bg-gradient-to-br from-gray-50 to-white p-6 rounded-[2rem] border border-gray-100 group hover:-translate-y-1 transition-all">
-                                        <div className="absolute top-4 right-4 text-6xl opacity-5 grayscale group-hover:grayscale-0 transition-all">🍔</div>
-                                        <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-dark text-white flex items-center justify-center font-bold shadow-lg text-sm border-2 border-white">
-                                            #{idx + 1}
-                                        </div>
-                                        
-                                        <h4 className="text-lg font-bold text-dark mt-2 mb-1">{prod.name}</h4>
-                                        <p className="text-primary font-black text-2xl mb-4">{Math.round((prod.count / (totalItemsSold || 1)) * 100)}%</p>
-                                        
-                                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden mb-3">
-                                            <div className="bg-primary h-full rounded-full transition-all duration-1000" style={{ width: `${(prod.count / (totalItemsSold || 1)) * 100}%` }}></div>
-                                        </div>
-                                        
-                                        <div className="flex justify-between text-xs font-medium text-gray-400">
-                                            <span>{prod.count} ventas</span>
-                                            <span>${prod.revenue.toFixed(0)}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                                {topProducts.length === 0 && <p className="text-center text-gray-400 w-full col-span-3">Aún no hay datos de ventas.</p>}
-                            </div>
-                        </div>
+                    <div className="animate-fade-in grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                         <StatCard title="Ingresos" value={`$${totalIncome.toFixed(2)}`} sub="Acumulado" icon="💰" colorClass="from-yellow-400 to-orange-500" />
+                         <StatCard title="Entregados" value={completedOrders} sub="Órdenes" icon="🛒" colorClass="from-blue-400 to-indigo-500" />
+                         <StatCard title="Ventas" value={totalItemsSold} sub="Unidades" icon="📦" colorClass="from-orange-400 to-red-500" />
+                         <StatCard title="Estado" value="Online" sub="Sincronizado" icon="🟢" colorClass="from-teal-400 to-green-500" />
                     </div>
                 )}
 
-                {/* 2. HISTORY VIEW */}
                 {currentTab === 'history' && (
                     <div className="animate-fade-in space-y-6">
-                        <div className="relative">
-                            <input 
-                                type="text"
-                                placeholder="🔍 Buscar por nombre, código o email..."
-                                className="w-full pl-6 pr-6 py-4 rounded-2xl bg-white border-none shadow-sm text-dark focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder-gray-400"
-                                value={searchTerm}
-                                onChange={e => setSearchTerm(e.target.value)}
-                            />
+                        <div className="flex flex-col md:flex-row gap-4 items-center">
+                            <div className="flex-1 w-full">
+                                <Input placeholder="🔍 Buscar por nombre, código..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                            </div>
+                            <Button variant="danger" onClick={handleResetDB} isLoading={isResetting}>Limpiar Historial</Button>
                         </div>
-
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                            {filteredOrders.length > 0 ? (
-                                filteredOrders.map(order => (
-                                    <OrderRowCard key={order.id} order={order} onViewDetails={setSelectedOrderDetails} />
-                                ))
-                            ) : (
-                                <div className="col-span-full py-20 text-center">
-                                    <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">📂</div>
-                                    <p className="text-gray-400 font-medium">No se encontraron resultados.</p>
-                                </div>
-                            )}
+                            {filteredOrders.map(order => (
+                                <OrderRowCard key={order.id} order={order} onViewDetails={setSelectedOrderDetails} />
+                            ))}
                         </div>
                     </div>
                 )}
 
-                {/* 3. SIMULATOR VIEW (SIMPLIFIED) */}
                 {currentTab === 'simulator' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in items-start">
-                        <div className="lg:col-span-7 space-y-8">
-                            <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 min-h-[400px]">
-                                <h3 className="font-bold text-dark text-xl mb-6 flex items-center gap-2">
-                                    <span>📦</span> Órdenes Listas para Retirar
-                                </h3>
-                                <p className="text-gray-400 text-sm mb-6">Selecciona una orden para probar el ingreso del código en el simulador lateral.</p>
-                                <div className="space-y-3">
-                                    {orders.filter(o => o.status === 'ready').map(order => (
-                                        <div 
-                                            key={order.id}
-                                            onClick={() => setSelectedOrderIdForSim(order.id)}
-                                            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex justify-between items-center group ${
-                                                selectedOrderIdForSim === order.id 
-                                                ? 'border-primary bg-orange-50' 
-                                                : 'border-gray-100 hover:border-gray-200'
-                                            }`}
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-sm ${selectedOrderIdForSim === order.id ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500'}`}>
-                                                    🥡
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-bold text-dark">Orden #{order.code}</h4>
-                                                    <p className="text-xs text-gray-400">Cliente: {order.customerDetails?.name || 'Invitado'}</p>
-                                                </div>
+                    <div className="max-w-4xl mx-auto animate-fade-in space-y-8">
+                        {/* Panel de Códigos Activos */}
+                        <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="font-bold text-xl flex items-center gap-2"><span>🏷️</span> Cajas esperando retiro</h3>
+                                <Badge type="ready" className="!bg-blue-50 !text-blue-600 !border-blue-100">{readyOrders.length} activas</Badge>
+                            </div>
+                            
+                            {readyOrders.length > 0 ? (
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    {readyOrders.map(ro => (
+                                        <div key={ro.id} className="bg-gray-50 border border-gray-100 p-4 rounded-[2rem] flex flex-col items-center text-center hover:border-primary/30 transition-colors">
+                                            <p className="text-[10px] text-gray-400 font-bold uppercase mb-1 truncate w-full">
+                                                {ro.customerDetails?.name || 'Cliente'}
+                                            </p>
+                                            <div className="text-3xl font-mono font-black text-primary tracking-widest">
+                                                {ro.code}
                                             </div>
-                                            <div className="w-6 h-6 rounded-full border-2 border-gray-200 flex items-center justify-center">
-                                                {selectedOrderIdForSim === order.id && <div className="w-3 h-3 bg-primary rounded-full"></div>}
-                                            </div>
+                                            <p className="text-[9px] text-gray-400 mt-1 font-mono">{ro.id}</p>
                                         </div>
                                     ))}
-                                    {orders.filter(o => o.status === 'ready').length === 0 && (
-                                        <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                                            <p className="text-gray-400">No hay órdenes esperando retiro en este momento.</p>
-                                        </div>
-                                    )}
                                 </div>
-                            </div>
-
-                            <Button 
-                                onClick={handleResetDB} 
-                                isLoading={isResetting}
-                                disabled={isResetting}
-                                variant="danger"
-                                className="w-full py-4 text-xs font-bold rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-red-500/10"
-                            >
-                                <span>🗑️</span> {isResetting ? 'Limpiando...' : 'Resetear Historial'}
-                            </Button>
+                            ) : (
+                                <div className="text-center py-8 text-gray-400">
+                                    <div className="text-4xl mb-2">📭</div>
+                                    <p className="text-sm font-medium">No hay cajas pendientes de apertura.</p>
+                                </div>
+                            )}
+                            <p className="text-[10px] text-gray-400 mt-6 italic text-center">
+                                Digite estos códigos en la terminal de abajo para simular que el cliente los ingresa físicamente.
+                            </p>
                         </div>
 
-                        <div className="lg:col-span-5 space-y-6 sticky top-8">
-                            <div className="bg-dark text-white p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary opacity-20 rounded-full blur-2xl"></div>
-                                
-                                <div className="flex justify-between items-center mb-8 relative z-10">
-                                    <div className="flex items-center gap-2">
-                                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-                                        <span className="text-xs font-mono text-gray-400 tracking-widest uppercase">Prueba Web</span>
-                                    </div>
-                                    <span className="text-2xl">📟</span>
+                        {/* Terminal Física Virtual */}
+                        <div className="bg-slate-900 text-white p-8 md:p-12 rounded-[3rem] shadow-2xl flex flex-col">
+                            <div className="flex justify-between items-center mb-10">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-3 h-3 rounded-full animate-pulse ${boxStatus.isOccupied ? 'bg-orange-500' : 'bg-green-500'}`}></div>
+                                    <span className="text-xs font-mono text-gray-400 uppercase tracking-widest">Estado Sistema: {boxStatus.isOccupied ? 'OCUPADO' : 'LIBRE'}</span>
                                 </div>
-
-                                <div className="bg-gray-800/50 rounded-2xl p-4 mb-6 border border-white/5">
-                                    <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Entrada Teclado</p>
-                                    <div className="text-3xl font-mono text-primary tracking-[0.2em] h-10">
-                                        {simulatedKeypadInput || '_ _ _ _'}
-                                    </div>
+                                <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/10 text-xs font-mono text-primary">
+                                    {boxStatus.currentUserId ? `USER: ${boxStatus.currentUserId.slice(0, 8)}` : 'READY_TO_PICKUP'}
                                 </div>
-
-                                <div className="grid grid-cols-3 gap-3 mb-6">
-                                    {[1,2,3,4,5,6,7,8,9].map(num => (
-                                        <button 
-                                            key={num}
-                                            onClick={() => simulatedKeypadInput.length < 4 && setSimulatedKeypadInput(prev => prev + num)}
-                                            className="bg-gray-700/50 hover:bg-gray-600/50 text-white font-mono text-xl py-4 rounded-xl transition-colors border border-white/5"
-                                        >
-                                            {num}
-                                        </button>
-                                    ))}
-                                    <button onClick={() => setSimulatedKeypadInput('')} className="bg-red-500/20 text-red-400 font-bold py-4 rounded-xl hover:bg-red-500/30">C</button>
-                                    <button onClick={() => simulatedKeypadInput.length < 4 && setSimulatedKeypadInput(prev => prev + '0')} className="bg-gray-700/50 text-white font-mono text-xl py-4 rounded-xl">0</button>
-                                    <button 
-                                        onClick={handleSimulateKeypad}
-                                        disabled={!selectedOrderIdForSim}
-                                        className={`font-bold py-4 rounded-xl transition-all ${
-                                            selectedOrderIdForSim 
-                                            ? 'bg-primary text-white hover:bg-orange-600 shadow-lg shadow-orange-500/30' 
-                                            : 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
-                                        }`}
-                                    >
-                                        OK
-                                    </button>
-                                </div>
-
-                                <p className="text-[10px] text-gray-500 text-center uppercase tracking-widest">Solo para pruebas de flujo web</p>
                             </div>
+
+                            <div className="bg-black/40 rounded-[2rem] p-8 mb-10 border border-white/10 text-center">
+                                <p className="text-[10px] text-gray-500 uppercase font-bold mb-4 tracking-widest">Monitor Terminal IoT</p>
+                                <div className="text-6xl font-mono text-primary tracking-[0.6em] min-h-[1.2em]">
+                                    {physicalKeyPress?.key || '_'}
+                                </div>
+                                <p className="text-[10px] text-blue-400 mt-4 font-mono">Pulsación: {physicalKeyPress ? new Date(physicalKeyPress.timestamp).toLocaleTimeString() : '--:--:--'}</p>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-6 max-w-sm mx-auto w-full mb-10">
+                                {[1,2,3,4,5,6,7,8,9, '*', 0, '#'].map(key => (
+                                    <button 
+                                        key={key}
+                                        onClick={() => handleKeypress(key.toString())}
+                                        className="bg-white/5 hover:bg-white/10 text-white font-mono text-3xl py-6 rounded-2xl transition-all border border-white/5 active:scale-95 shadow-lg"
+                                    >
+                                        {key}
+                                    </button>
+                                ))}
+                            </div>
+                            
+                            <p className="text-[10px] text-gray-500 text-center uppercase tracking-widest leading-relaxed opacity-60">
+                                Las pulsaciones se sincronizan vía Firebase para simular el hardware real.<br/>
+                                Use "*" para borrar el buffer de entrada.
+                            </p>
                         </div>
                     </div>
                 )}
                 
-                {/* 4. SENSORS VIEW */}
                 {currentTab === 'sensors' && (
-                    <div className="relative overflow-hidden bg-white rounded-[3rem] border border-gray-100 shadow-2xl min-h-[70vh] flex flex-col items-center justify-center p-8 lg:p-12 animate-fade-in">
-                        
-                        {/* BACKGROUND PATTERN */}
-                        <div className="absolute inset-0 pointer-events-none opacity-[0.03] select-none overflow-hidden">
-                             <div className="grid grid-cols-6 md:grid-cols-8 gap-8 md:gap-16 transform -rotate-12 scale-110">
-                                {Array.from({ length: 60 }).map((_, i) => (
-                                    <div key={i} className="text-4xl md:text-6xl">
-                                        {['🍔', '🍕', '🍟', '🌭', '🌮', '🍦', '🍩', '🥤'][i % 8]}
-                                    </div>
-                                ))}
-                            </div>
+                    <div className="bg-white rounded-[3rem] p-8 md:p-16 shadow-xl border border-gray-100 flex flex-col items-center animate-fade-in">
+                        <div className="text-center mb-12">
+                            <h2 className="text-4xl font-black text-dark mb-2">Monitoreo Real</h2>
+                            <p className="text-gray-400 font-medium">Lectura en tiempo real de los compartimentos</p>
                         </div>
-
-                        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-white/50 to-white/80 pointer-events-none z-0"></div>
-
-                        <div className="relative z-10 w-full max-w-5xl flex flex-col items-center">
-                            
-                            <div className="flex flex-col items-center mb-12 text-center animate-slide-up">
-                                <div className="w-32 h-32 bg-white rounded-full p-4 shadow-xl shadow-orange-100 border-4 border-orange-50 mb-6 relative hover:scale-105 transition-transform duration-500">
-                                    <img 
-                                        src="/images/logo.png" 
-                                        alt="Food Box Logo" 
-                                        className="w-full h-full object-contain drop-shadow-md"
-                                        onError={(e) => {
-                                            e.currentTarget.style.display = 'none';
-                                        }} 
-                                    />
-                                </div>
-                                <h2 className="text-4xl md:text-5xl font-black text-dark tracking-tight mb-2">
-                                    Sensores IoT
-                                </h2>
-                                <p className="text-gray-400 font-medium text-lg">Monitoreo de temperatura en tiempo real</p>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
-                                {/* Hot Sensor Card */}
-                                <div className="bg-white/60 backdrop-blur-xl rounded-[2.5rem] p-8 shadow-xl shadow-red-500/10 border border-red-100 relative overflow-hidden group hover:-translate-y-2 transition-all duration-300">
-                                    <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 transition-all group-hover:bg-red-500/10"></div>
-                                    
-                                    <div className="relative z-10 flex flex-col items-center text-center">
-                                        <div className="w-20 h-20 rounded-full bg-red-50 text-red-500 flex items-center justify-center text-4xl mb-6 shadow-inner ring-4 ring-red-50/50">
-                                            🔥
-                                        </div>
-                                        <h3 className="text-gray-400 font-bold uppercase tracking-widest text-sm mb-2">Zona Caliente</h3>
-                                        <div className="text-7xl lg:text-8xl font-black text-red-600 tracking-tighter mb-4 tabular-nums drop-shadow-sm">
-                                            {realTemps.hot}<span className="text-4xl align-top text-red-400 opacity-60">°C</span>
-                                        </div>
-                                        <div className="w-full bg-gray-100/50 rounded-full h-4 overflow-hidden mb-3 border border-gray-100">
-                                            <div 
-                                                className="h-full bg-gradient-to-r from-orange-400 to-red-600 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(239,68,68,0.5)]"
-                                                style={{ width: `${Math.min(Math.max(realTemps.hot, 0), 100)}%` }}
-                                            ></div>
-                                        </div>
-                                        <p className="text-sm font-medium text-red-400 bg-red-50 px-4 py-1 rounded-full">Meta: 60°C - 75°C</p>
-                                    </div>
-                                </div>
-
-                                {/* Cold Sensor Card */}
-                                <div className="bg-white/60 backdrop-blur-xl rounded-[2.5rem] p-8 shadow-xl shadow-cyan-500/10 border border-cyan-100 relative overflow-hidden group hover:-translate-y-2 transition-all duration-300">
-                                    <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 transition-all group-hover:bg-cyan-500/10"></div>
-                                    
-                                    <div className="relative z-10 flex flex-col items-center text-center">
-                                        <div className="w-20 h-20 rounded-full bg-cyan-50 text-cyan-500 flex items-center justify-center text-4xl mb-6 shadow-inner ring-4 ring-cyan-50/50">
-                                            ❄️
-                                        </div>
-                                        <h3 className="text-gray-400 font-bold uppercase tracking-widest text-sm mb-2">Zona Fría</h3>
-                                        <div className="text-7xl lg:text-8xl font-black text-cyan-600 tracking-tighter mb-4 tabular-nums drop-shadow-sm">
-                                            {realTemps.cold}<span className="text-4xl align-top text-cyan-400 opacity-60">°C</span>
-                                        </div>
-                                        <div className="w-full bg-gray-100/50 rounded-full h-4 overflow-hidden mb-3 border border-gray-100">
-                                            <div 
-                                                className="h-full bg-gradient-to-r from-blue-400 to-cyan-500 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
-                                                style={{ width: `${Math.min(Math.max(realTemps.cold * 3, 0), 100)}%` }}
-                                            ></div>
-                                        </div>
-                                        <p className="text-sm font-medium text-cyan-500 bg-cyan-50 px-4 py-1 rounded-full">Meta: 2°C - 8°C</p>
-                                    </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 w-full max-w-5xl">
+                            <div className="flex flex-col items-center text-center p-12 bg-red-50 rounded-[3rem] border border-red-100 shadow-sm transition-all hover:shadow-md">
+                                <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center text-4xl mb-6 shadow-sm">🔥</div>
+                                <p className="text-xs font-bold text-red-400 uppercase tracking-widest mb-4">Zona Caliente</p>
+                                <div className="text-8xl font-black text-red-600 mb-6 font-mono">{realTemps.hot}°</div>
+                                <div className="w-full bg-red-200 rounded-full h-4 overflow-hidden shadow-inner">
+                                    <div className="bg-gradient-to-r from-red-500 to-orange-500 h-full transition-all duration-1000" style={{ width: `${Math.min(realTemps.hot, 100)}%` }}></div>
                                 </div>
                             </div>
-                            
-                            <div className="mt-10 text-center">
-                                <p className="text-gray-400 text-sm bg-white/50 backdrop-blur px-6 py-2 rounded-full inline-flex items-center gap-2 shadow-sm border border-gray-100">
-                                    <span className="relative flex h-2 w-2">
-                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                                    </span>
-                                    Sincronización en tiempo real activa
-                                </p>
+
+                            <div className="flex flex-col items-center text-center p-12 bg-cyan-50 rounded-[3rem] border border-cyan-100 shadow-sm transition-all hover:shadow-md">
+                                <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center text-4xl mb-6 shadow-sm">❄️</div>
+                                <p className="text-xs font-bold text-cyan-400 uppercase tracking-widest mb-4">Zona Fría</p>
+                                <div className="text-8xl font-black text-cyan-600 mb-6 font-mono">{realTemps.cold}°</div>
+                                <div className="w-full bg-cyan-200 rounded-full h-4 overflow-hidden shadow-inner">
+                                    <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-full transition-all duration-1000" style={{ width: `${Math.min(realTemps.cold * 3, 100)}%` }}></div>
+                                </div>
                             </div>
                         </div>
                     </div>
