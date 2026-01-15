@@ -48,9 +48,11 @@ export const OrderStatusPage: React.FC = () => {
   if (!order) {
       return (
         <PageLayout className="flex items-center justify-center">
-            <div className="text-center">
-                <p className="text-lg text-gray-500 mb-4">Orden no encontrada</p>
-                <Button onClick={() => navigate('/menu')}>Volver al menú</Button>
+            <div className="text-center p-8 bg-white rounded-3xl shadow-xl max-w-sm mx-auto">
+                <div className="text-5xl mb-4">🔍</div>
+                <h2 className="text-xl font-black text-dark mb-2">Orden no encontrada</h2>
+                <p className="text-gray-500 text-sm mb-6">Parece que este pedido ya fue procesado o no existe.</p>
+                <Button onClick={() => navigate('/menu')} fullWidth>Ir al inicio</Button>
             </div>
         </PageLayout>
       );
@@ -60,10 +62,7 @@ export const OrderStatusPage: React.FC = () => {
   const isReady = order.status === 'ready';
   const isDelivered = order.status === 'delivered';
   
-  // Lógica de "Fila Virtual": Si la caja está ocupada por otro usuario
   const isBoxBusyByOther = boxStatus.isOccupied && boxStatus.currentUserId !== user?.id;
-
-  // Verificación de código opcional (si el usuario decide usar el teclado físico)
   const isCodeMatched = keyBuffer === order.code;
 
   const handleConfirmDelivery = async () => {
@@ -75,6 +74,77 @@ export const OrderStatusPage: React.FC = () => {
   const hasHot = order.items.some(i => i.type === 'hot');
   const hasCold = order.items.some(i => i.type === 'cold');
 
+  // Vista de Factura Final
+  if (isDelivered) {
+    return (
+        <PageLayout className="bg-gray-100">
+            <div className="max-w-md mx-auto p-6 flex flex-col items-center min-h-screen justify-center">
+                <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white text-4xl mb-6 shadow-xl shadow-green-500/20 animate-bounce-soft">
+                    ✓
+                </div>
+                
+                <div className="w-full bg-white rounded-t-3xl shadow-2xl relative p-8 pb-4">
+                    {/* Estilo Ticket */}
+                    <div className="absolute -top-2 left-0 w-full h-4 bg-white" style={{ clipPath: 'polygon(0% 100%, 5% 0%, 10% 100%, 15% 0%, 20% 100%, 25% 0%, 30% 100%, 35% 0%, 40% 100%, 45% 0%, 50% 100%, 55% 0%, 60% 100%, 65% 0%, 70% 100%, 75% 0%, 80% 100%, 85% 0%, 90% 100%, 95% 0%, 100% 100%)' }}></div>
+                    
+                    <div className="text-center border-b border-dashed border-gray-200 pb-6 mb-6">
+                        <h2 className="text-2xl font-black text-dark uppercase tracking-tighter italic">Food Box Smart</h2>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Recibo de Entrega Digital</p>
+                    </div>
+
+                    <div className="space-y-4 mb-8">
+                        <div className="flex justify-between text-[11px] font-mono text-gray-500">
+                            <span>TRANSACCIÓN:</span>
+                            <span className="font-bold text-dark">{order.id}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] font-mono text-gray-500">
+                            <span>FECHA:</span>
+                            <span className="font-bold text-dark">{new Date(order.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] font-mono text-gray-500">
+                            <span>CLIENTE:</span>
+                            <span className="font-bold text-dark uppercase">{order.customerDetails?.name || 'Usuario'}</span>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3 mb-8">
+                        <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Detalle de Productos</p>
+                        {order.items.map((item, i) => (
+                            <div key={i} className="flex justify-between items-center text-sm">
+                                <span className="text-gray-700 font-medium">{item.quantity}x {item.name}</span>
+                                <span className="font-bold text-dark">${(item.price * item.quantity).toFixed(2)}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="border-t-2 border-dark pt-4 flex justify-between items-end mb-6">
+                        <span className="text-sm font-black text-dark">TOTAL PAGADO</span>
+                        <span className="text-3xl font-black text-primary">${order.total.toFixed(2)}</span>
+                    </div>
+
+                    <div className="text-center bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        <p className="text-xs font-bold text-gray-400">¡Gracias por tu compra!</p>
+                        <p className="text-[9px] text-gray-300 mt-1 uppercase tracking-tighter">Es un placer servirte comida fresca</p>
+                    </div>
+                </div>
+                
+                {/* Parte inferior del ticket (jagged edge) */}
+                <div className="w-full h-4 bg-white shadow-2xl" style={{ clipPath: 'polygon(0% 0%, 5% 100%, 10% 0%, 15% 100%, 20% 0%, 25% 100%, 30% 0%, 35% 100%, 40% 0%, 45% 100%, 50% 0%, 55% 100%, 60% 0%, 65% 100%, 70% 0%, 75% 100%, 80% 0%, 85% 100%, 90% 0%, 95% 100%, 100% 0%)' }}></div>
+
+                <div className="w-full mt-8 animate-slide-up">
+                    <Button 
+                        onClick={() => navigate('/menu')} 
+                        fullWidth 
+                        className="!rounded-2xl py-5 text-lg shadow-xl shadow-dark/20 bg-dark text-white hover:bg-black"
+                    >
+                        Cerrar y Finalizar
+                    </Button>
+                </div>
+            </div>
+        </PageLayout>
+    );
+  }
+
   return (
     <PageLayout>
        <Navbar title={`Pedido #${order.id.slice(-4)}`} onBack={() => navigate('/menu')} transparent />
@@ -85,102 +155,76 @@ export const OrderStatusPage: React.FC = () => {
               <div className="absolute left-0 top-5 w-full h-1 bg-gray-200 -z-0"></div>
               <div 
                 className="absolute left-0 top-5 h-1 bg-gradient-to-r from-primary to-green-400 transition-all duration-1000 -z-0"
-                style={{ width: isDelivered ? '100%' : isReady ? '50%' : '10%' }}
+                style={{ width: isReady ? '50%' : '10%' }}
               ></div>
               
               <StatusStep active={isPending} completed={!isPending} label="Cocinando" icon="🍳" />
-              <StatusStep active={isReady} completed={isDelivered} label="En Caja" icon="🥡" />
-              <StatusStep active={false} completed={isDelivered} label="Contigo" icon="😋" />
+              <StatusStep active={isReady} completed={false} label="En Caja" icon="🥡" />
+              <StatusStep active={false} completed={false} label="Contigo" icon="😋" />
           </div>
 
-          {!isDelivered ? (
-             <div className="w-full flex flex-col gap-6">
-                <Card className={`w-full p-8 flex flex-col items-center text-center relative overflow-hidden transition-all duration-500 ${isBoxBusyByOther ? 'bg-gray-50 opacity-80' : 'bg-white border-gray-100 shadow-xl'}`}>
-                    {isBoxBusyByOther ? (
-                        <div className="animate-pulse space-y-4">
-                            <span className="text-4xl">⏳</span>
-                            <h3 className="font-bold text-dark">Caja en uso</h3>
-                            <p className="text-sm text-gray-400">Otro cliente está retirando su pedido. Por favor espera un momento.</p>
+          <div className="w-full flex flex-col gap-6">
+            <Card className={`w-full p-8 flex flex-col items-center text-center relative overflow-hidden transition-all duration-500 ${isBoxBusyByOther ? 'bg-gray-50 opacity-80' : 'bg-white border-gray-100 shadow-xl'}`}>
+                {isBoxBusyByOther ? (
+                    <div className="animate-pulse space-y-4">
+                        <span className="text-4xl">⏳</span>
+                        <h3 className="font-bold text-dark">Caja en uso</h3>
+                        <p className="text-sm text-gray-400">Otro cliente está retirando su pedido. Por favor espera un momento.</p>
+                    </div>
+                ) : (
+                    <>
+                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-orange-400 to-primary animate-pulse" />
+                        <h2 className="text-gray-400 font-medium uppercase tracking-widest text-xs mb-4">Código de Retiro</h2>
+                        <div className={`text-7xl font-black transition-colors duration-300 tracking-widest font-mono mb-4 ${isCodeMatched ? 'text-green-500' : 'text-dark'}`}>
+                            {isReady && isCodeMatched ? keyBuffer : order.code}
                         </div>
-                    ) : (
-                        <>
-                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-orange-400 to-primary animate-pulse" />
-                            <h2 className="text-gray-400 font-medium uppercase tracking-widest text-xs mb-4">Código de Retiro</h2>
-                            <div className={`text-7xl font-black transition-colors duration-300 tracking-widest font-mono mb-4 ${isCodeMatched ? 'text-green-500' : 'text-dark'}`}>
-                                {isReady && isCodeMatched ? keyBuffer : order.code}
-                            </div>
-                            <div className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isCodeMatched ? 'bg-green-100 text-green-700 font-black' : isReady ? 'bg-orange-50 text-orange-600 font-bold' : 'bg-gray-100 text-gray-500'}`}>
-                                {isCodeMatched ? "✅ CÓDIGO DETECTADO" : isReady ? "✨ Tu pedido te espera en la caja" : "⏳ Estamos preparando tu comida..."}
-                            </div>
-                        </>
-                    )}
-                </Card>
+                        <div className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isCodeMatched ? 'bg-green-100 text-green-700 font-black' : isReady ? 'bg-orange-50 text-orange-600 font-bold' : 'bg-gray-100 text-gray-500'}`}>
+                            {isCodeMatched ? "✅ CÓDIGO DETECTADO" : isReady ? "✨ Tu pedido te espera en la caja" : "⏳ Estamos preparando tu comida..."}
+                        </div>
+                    </>
+                )}
+            </Card>
 
-                {/* BOTÓN DE CONFIRMACIÓN PRINCIPAL - Aparece cuando está listo sin obligar el código */}
-                {isReady && !isBoxBusyByOther && (
-                    <div className="animate-slide-up space-y-4">
-                        <Button 
-                            onClick={handleConfirmDelivery} 
-                            isLoading={confirming}
-                            fullWidth 
-                            className="bg-primary hover:bg-orange-600 text-white text-lg py-6 shadow-2xl shadow-orange-500/30 ring-4 ring-orange-50"
-                            icon={<span className="text-2xl">🧺</span>}
-                        >
-                            Abrir Food Box y Retirar
-                        </Button>
-                        <p className="text-center text-[10px] text-gray-400 font-bold uppercase tracking-widest animate-pulse">
-                            ¡Presiona el botón para desbloquear la puerta!
+            {isReady && !isBoxBusyByOther && (
+                <div className="animate-slide-up space-y-4">
+                    <Button 
+                        onClick={handleConfirmDelivery} 
+                        isLoading={confirming}
+                        fullWidth 
+                        className="bg-primary hover:bg-orange-600 text-white text-lg py-6 shadow-2xl shadow-orange-500/30 ring-4 ring-orange-50"
+                        icon={<span className="text-2xl">🧺</span>}
+                    >
+                        Abrir Food Box y Retirar
+                    </Button>
+                    <p className="text-center text-[10px] text-gray-400 font-bold uppercase tracking-widest animate-pulse">
+                        ¡Presiona el botón para desbloquear la puerta!
+                    </p>
+                </div>
+            )}
+
+            {isReady && !isBoxBusyByOther && (
+                <div className="space-y-4 animate-fade-in pt-4">
+                    <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 flex items-center gap-3">
+                        <span className="text-2xl">💡</span>
+                        <p className="text-xs text-blue-700 font-medium">
+                            Al abrir la puerta, retira tus productos de las zonas: <br/>
+                            <span className="font-bold">{hasHot ? '🔥 Caliente' : ''} {hasHot && hasCold ? 'y' : ''} {hasCold ? '❄️ Fría' : ''}</span>
                         </p>
                     </div>
-                )}
-
-                {isReady && !isBoxBusyByOther && (
-                    <div className="space-y-4 animate-fade-in pt-4">
-                        <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 flex items-center gap-3">
-                            <span className="text-2xl">💡</span>
-                            <p className="text-xs text-blue-700 font-medium">
-                                Al abrir la puerta, retira tus productos de las zonas: <br/>
-                                <span className="font-bold">{hasHot ? '🔥 Caliente' : ''} {hasHot && hasCold ? 'y' : ''} {hasCold ? '❄️ Fría' : ''}</span>
-                            </p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <TempCard label="Caliente" value={realTemps.hot} type="hot" />
-                            <TempCard label="Frío" value={realTemps.cold} type="cold" />
-                        </div>
-                    </div>
-                )}
-
-                {isPending && (
-                    <div className="text-center p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 border-dashed">
-                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm text-2xl">👨‍🍳</div>
-                        <p className="text-gray-500 text-sm font-medium">Mantendremos tu comida a la temperatura ideal hasta que llegues.</p>
-                    </div>
-                )}
-             </div>
-          ) : (
-            <div className="w-full text-center animate-fade-in flex flex-col items-center">
-                <div className="text-6xl mb-4 animate-bounce-soft">🎉</div>
-                <h2 className="text-3xl font-black text-dark tracking-tight">¡Pedido Entregado!</h2>
-                <p className="text-gray-500 mt-2 mb-6 font-medium">Gracias por confiar en Food Box Smart.</p>
-                
-                <div className="w-full bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 mb-8">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 border-b border-gray-50 pb-3">Resumen de tu retiro</h3>
-                    <div className="space-y-4">
-                        {order.items.map((item, i) => (
-                            <div key={i} className="flex justify-between items-center">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-xs font-bold">{item.quantity}x</div>
-                                    <span className="text-dark font-bold text-sm">{item.name}</span>
-                                </div>
-                                <Badge type={item.type} className="scale-75" />
-                            </div>
-                        ))}
+                    <div className="grid grid-cols-2 gap-3">
+                        <TempCard label="Caliente" value={realTemps.hot} type="hot" />
+                        <TempCard label="Frío" value={realTemps.cold} type="cold" />
                     </div>
                 </div>
+            )}
 
-                <Button onClick={() => navigate('/menu')} variant="secondary" className="w-full py-4 !rounded-2xl">Volver al Menú</Button>
-            </div>
-          )}
+            {isPending && (
+                <div className="text-center p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 border-dashed">
+                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm text-2xl">👨‍🍳</div>
+                    <p className="text-gray-500 text-sm font-medium">Mantendremos tu comida a la temperatura ideal hasta que llegues.</p>
+                </div>
+            )}
+          </div>
        </div>
     </PageLayout>
   );
