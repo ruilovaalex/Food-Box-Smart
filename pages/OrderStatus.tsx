@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMqtt } from '../context/MqttContext';
 import { useAuth } from '../context/AuthContext';
@@ -38,9 +38,10 @@ const TempCard: React.FC<{ label: string; value: number; type: 'hot' | 'cold' }>
 
 export const OrderStatusPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { orders, realTemps, boxStatus } = useMqtt();
+  const { orders, realTemps, boxStatus, keyBuffer, confirmOrderDelivery } = useMqtt();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [confirming, setConfirming] = useState(false);
 
   const order = orders.find(o => o.id === id);
 
@@ -61,6 +62,15 @@ export const OrderStatusPage: React.FC = () => {
   
   // Lógica de "Fila Virtual": Si la caja está ocupada por otro usuario
   const isBoxBusyByOther = boxStatus.isOccupied && boxStatus.currentUserId !== user?.id;
+
+  // NUEVO: Verificación de código en tiempo real
+  const isCodeMatched = keyBuffer === order.code;
+
+  const handleConfirmDelivery = async () => {
+    setConfirming(true);
+    await confirmOrderDelivery(order.id);
+    setConfirming(false);
+  };
 
   const hasHot = order.items.some(i => i.type === 'hot');
   const hasCold = order.items.some(i => i.type === 'cold');
@@ -85,7 +95,7 @@ export const OrderStatusPage: React.FC = () => {
 
           {!isDelivered ? (
              <div className="w-full flex flex-col gap-6">
-                <Card className={`w-full p-8 flex flex-col items-center text-center relative overflow-hidden transition-all duration-500 ${isBoxBusyByOther ? 'bg-gray-50 opacity-80' : 'bg-white border-gray-100'}`}>
+                <Card className={`w-full p-8 flex flex-col items-center text-center relative overflow-hidden transition-all duration-500 ${isBoxBusyByOther ? 'bg-gray-50 opacity-80' : 'bg-white border-gray-100 shadow-xl'}`}>
                     {isBoxBusyByOther ? (
                         <div className="animate-pulse space-y-4">
                             <span className="text-4xl">⏳</span>
@@ -96,15 +106,32 @@ export const OrderStatusPage: React.FC = () => {
                         <>
                             <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-orange-400 to-primary animate-pulse" />
                             <h2 className="text-gray-400 font-medium uppercase tracking-widest text-xs mb-4">Código de Retiro</h2>
-                            <div className="text-7xl font-black text-dark tracking-widest font-mono mb-4">{order.code}</div>
-                            <div className={`px-4 py-2 rounded-lg text-sm font-medium ${isReady ? 'bg-orange-50 text-orange-600 font-bold' : 'bg-gray-100 text-gray-500'}`}>
-                                {isReady ? "✨ Digítalo en el teclado físico" : "⏳ Preparando tu orden..."}
+                            <div className={`text-7xl font-black transition-colors duration-300 tracking-widest font-mono mb-4 ${isCodeMatched ? 'text-green-500' : 'text-dark'}`}>
+                                {isCodeMatched ? keyBuffer : order.code}
+                            </div>
+                            <div className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isCodeMatched ? 'bg-green-100 text-green-700 font-black' : isReady ? 'bg-orange-50 text-orange-600 font-bold' : 'bg-gray-100 text-gray-500'}`}>
+                                {isCodeMatched ? "✅ CÓDIGO CORRECTO" : isReady ? "✨ Digítalo en el teclado físico" : "⏳ Preparando tu orden..."}
                             </div>
                         </>
                     )}
                 </Card>
 
-                {isReady && !isBoxBusyByOther && (
+                {/* BOTÓN DE CONFIRMACIÓN - Solo si el código coincide */}
+                {isCodeMatched && !isBoxBusyByOther && (
+                    <div className="animate-slide-up">
+                        <Button 
+                            onClick={handleConfirmDelivery} 
+                            isLoading={confirming}
+                            fullWidth 
+                            className="bg-green-600 hover:bg-green-700 text-white text-lg py-5 shadow-2xl shadow-green-500/30 ring-4 ring-green-100"
+                        >
+                            🧺 Confirmar Retiro y Abrir
+                        </Button>
+                        <p className="text-center text-[10px] text-gray-400 mt-3 font-bold uppercase tracking-widest">Presiona para desbloquear el Food Box</p>
+                    </div>
+                )}
+
+                {isReady && !isCodeMatched && !isBoxBusyByOther && (
                     <div className="space-y-4 animate-fade-in">
                         <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 flex items-center gap-3">
                             <span className="text-2xl">💡</span>

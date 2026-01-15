@@ -16,9 +16,9 @@ export const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Rutas según repositorio
-  const logoUrl = 'images/logo.png';
-  const gifUrl = 'images/calavera.gif';
+  // Rutas absolutas para asegurar carga desde el root
+  const logoUrl = '/images/logo.png';
+  const gifUrl = '/images/calavera.gif';
   
   const [logoError, setLogoError] = useState(false);
   const [gifVisible, setGifVisible] = useState(true);

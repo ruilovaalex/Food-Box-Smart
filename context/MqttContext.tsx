@@ -8,11 +8,14 @@ interface MqttContextType {
   orders: Order[];
   createOrder: (order: Order) => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  confirmOrderDelivery: (orderId: string) => Promise<void>;
   simulateBoxKeypadEntry: (orderId: string, code: string) => boolean;
   resetDatabase: () => void;
   realTemps: { hot: number, cold: number };
   physicalKeyPress: { key: string, timestamp: number } | null;
   boxStatus: { isOccupied: boolean, currentUserId: string | null };
+  keyBuffer: string;
+  setKeyBuffer: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const MqttContext = createContext<MqttContextType | undefined>(undefined);
@@ -50,21 +53,8 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setKeyBuffer('');
         } else {
             setKeyBuffer(prev => {
+                // Solo guardamos los últimos 4 dígitos
                 const newBuf = (prev + data.key).slice(-4);
-                const matchingOrder = ordersRef.current.find(o => o.status === 'ready' && o.code === newBuf);
-                
-                if (matchingOrder) {
-                    // Marcamos como ocupado físicamente por seguridad mientras se retira
-                    database.updateBoxStatus(true, matchingOrder.userId);
-                    updateOrderStatus(matchingOrder.id, 'delivered');
-                    
-                    // Liberar automáticamente tras el tiempo de retiro
-                    setTimeout(() => {
-                        database.updateBoxStatus(false, null);
-                    }, 8000);
-                    
-                    return ''; 
-                }
                 return newBuf;
             });
         }
@@ -92,22 +82,33 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [user]); 
 
   const createOrder = async (order: Order) => {
-    // AUTOMÁTICO: Marcar caja como ocupada al crear pedido
     await database.updateBoxStatus(true, order.userId);
     await database.addOrder(order);
   };
 
   const updateOrderStatus = (orderId: string, status: OrderStatus) => database.updateOrderStatus(orderId, status);
 
+  const confirmOrderDelivery = async (orderId: string) => {
+    const order = ordersRef.current.find(o => o.id === orderId);
+    if (order) {
+        await database.updateBoxStatus(true, order.userId);
+        await updateOrderStatus(orderId, 'delivered');
+        setKeyBuffer(''); // Limpiamos el buffer tras confirmar
+        
+        // Liberar automáticamente tras el tiempo de retiro
+        setTimeout(() => {
+            database.updateBoxStatus(false, null);
+        }, 8000);
+    }
+  };
+
   const simulateBoxKeypadEntry = (orderId: string, inputCode: string) => {
     const order = ordersRef.current.find(o => o.id === orderId);
     if (order && order.code === inputCode) {
-      database.updateBoxStatus(true, order.userId);
-      updateOrderStatus(orderId, 'delivered'); 
-      setTimeout(() => {
-          database.updateBoxStatus(false, null);
-      }, 8000);
-      return true;
+        // En el simulador manual, si se pide explícitamente simular la entrada completa,
+        // simplemente seteamos el buffer para que el botón aparezca
+        setKeyBuffer(inputCode);
+        return true;
     }
     return false;
   };
@@ -116,8 +117,8 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   return (
     <MqttContext.Provider value={{ 
-        orders, createOrder, updateOrderStatus, simulateBoxKeypadEntry, 
-        resetDatabase, realTemps, physicalKeyPress, boxStatus
+        orders, createOrder, updateOrderStatus, confirmOrderDelivery, simulateBoxKeypadEntry, 
+        resetDatabase, realTemps, physicalKeyPress, boxStatus, keyBuffer, setKeyBuffer
     }}>
       {children}
     </MqttContext.Provider>

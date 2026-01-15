@@ -144,7 +144,7 @@ const OrderDetailModal: React.FC<{ order: Order; onClose: () => void }> = ({ ord
 }
 
 export const AdminDashboard: React.FC = () => {
-    const { orders, resetDatabase, realTemps, boxStatus, physicalKeyPress } = useMqtt();
+    const { orders, resetDatabase, realTemps, boxStatus, physicalKeyPress, keyBuffer, confirmOrderDelivery } = useMqtt();
     const { logout, user } = useAuth();
     const navigate = useNavigate();
     
@@ -152,6 +152,7 @@ export const AdminDashboard: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedOrderDetails, setSelectedOrderDetails] = useState<Order | null>(null);
     const [isResetting, setIsResetting] = useState(false);
+    const [confirming, setConfirming] = useState(false);
 
     // --- Stats Logic ---
     const totalIncome = orders.reduce((acc, o) => acc + (o.status !== 'cancelled' ? (o.total || 0) : 0), 0);
@@ -168,8 +169,19 @@ export const AdminDashboard: React.FC = () => {
     // Órdenes que están esperando ser abiertas (estatus 'ready')
     const readyOrders = orders.filter(o => o.status === 'ready');
 
+    // Verificar si el buffer actual coincide con alguna orden
+    const matchingOrder = readyOrders.find(o => o.code === keyBuffer);
+
     const handleKeypress = async (key: string) => {
         await database.sendKeypress(key);
+    };
+
+    const handleConfirmManual = async () => {
+        if (matchingOrder) {
+            setConfirming(true);
+            await confirmOrderDelivery(matchingOrder.id);
+            setConfirming(false);
+        }
     };
 
     const handleResetDB = async () => {
@@ -280,9 +292,6 @@ export const AdminDashboard: React.FC = () => {
                                     <p className="text-sm font-medium">No hay cajas pendientes de apertura.</p>
                                 </div>
                             )}
-                            <p className="text-[10px] text-gray-400 mt-6 italic text-center">
-                                Digite estos códigos en la terminal de abajo para simular que el cliente los ingresa físicamente.
-                            </p>
                         </div>
 
                         {/* Terminal Física Virtual */}
@@ -297,13 +306,33 @@ export const AdminDashboard: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="bg-black/40 rounded-[2rem] p-8 mb-10 border border-white/10 text-center">
-                                <p className="text-[10px] text-gray-500 uppercase font-bold mb-4 tracking-widest">Monitor Terminal IoT</p>
-                                <div className="text-6xl font-mono text-primary tracking-[0.6em] min-h-[1.2em]">
-                                    {physicalKeyPress?.key || '_'}
+                            <div className="bg-black/40 rounded-[2rem] p-8 mb-6 border border-white/10 text-center relative overflow-hidden">
+                                {matchingOrder && (
+                                    <div className="absolute inset-0 bg-green-500/10 flex items-center justify-center animate-pulse pointer-events-none">
+                                        <div className="text-green-500 font-black text-xs uppercase tracking-[0.4em]">Código Válido Detectado</div>
+                                    </div>
+                                )}
+                                <p className="text-[10px] text-gray-500 uppercase font-bold mb-4 tracking-widest relative z-10">Monitor Terminal IoT</p>
+                                <div className={`text-6xl font-mono tracking-[0.6em] min-h-[1.2em] relative z-10 transition-colors ${matchingOrder ? 'text-green-400' : 'text-primary'}`}>
+                                    {keyBuffer || '_'}
                                 </div>
-                                <p className="text-[10px] text-blue-400 mt-4 font-mono">Pulsación: {physicalKeyPress ? new Date(physicalKeyPress.timestamp).toLocaleTimeString() : '--:--:--'}</p>
+                                <p className="text-[10px] text-blue-400 mt-4 font-mono relative z-10">Pulsación: {physicalKeyPress ? new Date(physicalKeyPress.timestamp).toLocaleTimeString() : '--:--:--'}</p>
                             </div>
+
+                            {/* Botón de Confirmación en Simulador */}
+                            {matchingOrder && (
+                                <div className="mb-10 animate-slide-up">
+                                    <Button 
+                                        fullWidth 
+                                        className="bg-green-600 hover:bg-green-500 py-4 !rounded-2xl shadow-green-500/20 shadow-xl"
+                                        onClick={handleConfirmManual}
+                                        isLoading={confirming}
+                                    >
+                                        ✅ Confirmar Entrega Manual
+                                    </Button>
+                                    <p className="text-[9px] text-gray-500 text-center mt-2 uppercase font-bold tracking-widest">El cliente ahora puede confirmar desde su app o tú puedes hacerlo aquí</p>
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-3 gap-6 max-w-sm mx-auto w-full mb-10">
                                 {[1,2,3,4,5,6,7,8,9, '*', 0, '#'].map(key => (

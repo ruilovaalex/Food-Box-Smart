@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 // --- Layout Wrapper ---
@@ -8,7 +9,8 @@ export const PageLayout: React.FC<{ children: React.ReactNode, className?: strin
 );
 
 // --- Badge ---
-export const Badge: React.FC<{ type: 'hot' | 'cold' | string, className?: string }> = ({ type, className = '' }) => {
+// Fixed: Added children to props and updated rendering logic to prefer children if provided.
+export const Badge: React.FC<{ children?: React.ReactNode, type: 'hot' | 'cold' | string, className?: string }> = ({ children, type, className = '' }) => {
   const isHot = type === 'hot';
   const isCold = type === 'cold';
   
@@ -26,7 +28,7 @@ export const Badge: React.FC<{ type: 'hot' | 'cold' | string, className?: string
   return (
     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${styles} ${className}`}>
       {icon && <span>{icon}</span>}
-      {isHot ? 'Caliente' : isCold ? 'Frío' : type}
+      {children || (isHot ? 'Caliente' : isCold ? 'Frío' : type)}
     </span>
   );
 };
