@@ -1,5 +1,5 @@
 {
   "name": "Food Box Smart",
-  "description": "A smart food ordering application integrating with IoT food boxes for automated pickup.",
+  "description": "Aplicación inteligente para la gestión y retiro de pedidos mediante casilleros IoT automatizados.",
   "requestFramePermissions": []
 }
