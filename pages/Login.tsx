@@ -1,197 +1,193 @@
-import React, { useState, useMemo } from 'react';
-import { useMqtt } from '../context/MqttContext';
+
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Card, Button, PageLayout, Badge, Input } from '../components/UI';
-import { useNavigate } from 'react-router-dom';
-import { database } from '../services/database';
-import { PRODUCTS } from '../constants';
+import { Button, Input } from '../components/UI';
 
-type TabView = 'dashboard' | 'inventory' | 'history' | 'sensors';
+export const Login: React.FC = () => {
+  const { login, register, loginAnonymously } = useAuth();
+  
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-const StatCard: React.FC<{ title: string, value: string | number, sub: string, icon: string, colorClass: string }> = ({ title, value, sub, icon, colorClass }) => (
-    <div className="relative overflow-hidden bg-white rounded-[2rem] p-6 shadow-lg border border-gray-100 transition-all duration-300">
-        <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${colorClass} opacity-10 rounded-bl-[3rem]`}></div>
-        <div className="relative z-10">
-            <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${colorClass} flex items-center justify-center text-white text-2xl mb-4 shadow-sm`}>{icon}</div>
-            <h3 className="text-3xl font-black text-dark tracking-tight mb-1">{value}</h3>
-            <p className="text-gray-500 font-bold text-xs uppercase tracking-wider mb-1">{title}</p>
-            <p className="text-gray-400 text-xs">{sub}</p>
-        </div>
-    </div>
-);
+  // Rutas de archivos
+  const logoUrl = '/images/logo.png';
+  const gifUrl = '/images/calavera.gif';
+  
+  const [logoError, setLogoError] = useState(false);
+  const [gifError, setGifError] = useState(false);
 
-export const AdminDashboard: React.FC = () => {
-    const { orders, resetDatabase, realTemps, boxStatus, inventory, toggleProduct } = useMqtt();
-    const { logout } = useAuth();
-    const navigate = useNavigate();
-    
-    const [currentTab, setCurrentTab] = useState<TabView>('dashboard');
-    const [searchTerm, setSearchTerm] = useState('');
-    const [isResetting, setIsResetting] = useState(false);
-    const [isSimMode, setIsSimMode] = useState(false);
+  const [greeting, setGreeting] = useState('');
+  useEffect(() => {
+    const hours = new Date().getHours();
+    if (hours < 12) setGreeting('Buenos días');
+    else if (hours < 18) setGreeting('Buenas tardes');
+    else setGreeting('Buenas noches');
+  }, []);
 
-    const stats = useMemo(() => {
-        const productCounts: { [id: number]: { name: string, count: number } } = {};
-        const customerCounts: { [name: string]: { totalSpent: number, count: number } } = {};
-        let income = 0;
-        let units = 0;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-        orders.forEach(o => {
-            if (o.status === 'cancelled') return;
-            income += (o.total || 0);
-            o.items?.forEach(item => {
-                units += item.quantity;
-                if (!productCounts[item.id]) productCounts[item.id] = { name: item.name, count: 0 };
-                productCounts[item.id].count += item.quantity;
-            });
-            const custName = o.customerDetails?.name || 'Usuario';
-            if (!customerCounts[custName]) customerCounts[custName] = { totalSpent: 0, count: 0 };
-            customerCounts[custName].totalSpent += o.total;
-            customerCounts[custName].count += 1;
-        });
+    try {
+        if (isAdminMode) {
+            const adminEmail = email.toLowerCase().includes('@') ? email.toLowerCase() : `${email.toLowerCase()}@foodbox.com`;
+            await login(adminEmail, password);
+        } else {
+            if (isRegistering) {
+                if (!name.trim()) throw new Error("El nombre es obligatorio.");
+                await register(name, email, password);
+            } else {
+                await login(email, password);
+            }
+        }
+    } catch (err: any) {
+        let msg = "Error de acceso.";
+        if (err.code === 'auth/invalid-email') msg = "Correo inválido.";
+        if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') msg = "Credenciales incorrectas.";
+        setError(msg);
+        setLoading(false);
+    }
+  };
 
-        const sortedProds = Object.entries(productCounts).sort((a,b) => b[1].count - a[1].count);
-        return {
-            income, units,
-            topProduct: sortedProds[0]?.[1] || { name: 'N/A', count: 0 },
-            worstProduct: sortedProds[sortedProds.length-1]?.[1] || { name: 'N/A', count: 0 },
-            topCustomers: Object.entries(customerCounts).sort((a,b) => b[1].totalSpent - a[1].totalSpent).slice(0, 3)
-        };
-    }, [orders]);
+  return (
+    <div className={`min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-500 ${isAdminMode ? 'bg-slate-950' : 'bg-[#FFF9F5]'}`}>
+      
+      {/* Fondo decorativo con comida */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.05] select-none">
+          <div className="grid grid-cols-6 md:grid-cols-10 gap-10 transform -rotate-12 scale-125">
+              {Array.from({ length: 100 }).map((_, i) => (
+                  <div key={i} className="text-4xl">{['🍔', '🍕', '🍟', '🥤'][i % 4]}</div>
+              ))}
+          </div>
+      </div>
 
-    const filteredOrders = orders.filter(o => {
-        const term = searchTerm.toLowerCase();
-        return (o.id || '').toLowerCase().includes(term) || (o.customerDetails?.name || '').toLowerCase().includes(term);
-    });
+      <div className="w-full max-w-5xl bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10 animate-fade-in border border-white/50">
+        
+        {/* LADO IZQUIERDO: Visual & Branding */}
+        <div className={`md:w-[45%] p-10 lg:p-16 flex flex-col items-center justify-center relative overflow-hidden text-center transition-colors duration-500 ${isAdminMode ? 'bg-slate-900' : 'bg-primary'}`}>
+             
+             {/* Logo Principal */}
+             <div className="relative z-10 mb-8 transform hover:scale-105 transition-transform duration-500">
+                {!logoError ? (
+                    <img 
+                        src={logoUrl}
+                        alt="Logo Food Box" 
+                        className="w-40 h-40 md:w-64 md:h-64 object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.3)]" 
+                        onError={() => setLogoError(true)}
+                    />
+                ) : (
+                    <div className="text-8xl">🍔</div>
+                )}
+             </div>
+             
+             <h1 className="relative z-10 text-3xl md:text-4xl font-black text-white mb-2 tracking-tighter uppercase">Food Box Smart</h1>
+             <p className="relative z-10 text-white/80 text-sm md:text-base font-bold tracking-widest uppercase">
+                {isAdminMode ? 'Panel de Control IoT' : 'Pide. Retira. Disfruta.'}
+             </p>
 
-    const handleTempChange = async (type: 'hot' | 'cold', val: number) => {
-        const newTemps = { ...realTemps, [type]: val };
-        await database.updateSensors(newTemps.hot, newTemps.cold);
-    };
-
-    return (
-        <PageLayout className="bg-[#F3F4F6]">
-            {/* Header */}
-            <div className="bg-dark text-white rounded-b-[3rem] pt-10 pb-16 px-6 shadow-2xl relative overflow-hidden mb-10">
-                 <div className="absolute top-0 right-0 w-96 h-96 bg-primary opacity-20 rounded-full blur-3xl"></div>
-                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6 max-w-7xl mx-auto">
-                     <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 text-3xl">🛠️</div>
-                        <div><h2 className="text-gray-400 font-bold text-xs uppercase tracking-widest mb-1">Administración</h2><h1 className="text-3xl font-black">Panel Food Box</h1></div>
-                     </div>
-                     <Button variant="secondary" onClick={() => { logout(); navigate('/'); }} className="!bg-white/10 !text-white border-white/20">Cerrar Sesión</Button>
-                 </div>
-            </div>
-
-            {/* Nav Tabs */}
-            <div className="max-w-7xl mx-auto px-6 -mt-16 relative z-20 mb-10">
-                <div className="bg-white p-2 rounded-2xl shadow-xl flex gap-2 overflow-x-auto no-scrollbar border border-gray-100">
-                    {[
-                        { id: 'dashboard', label: 'Resumen', icon: '📊' },
-                        { id: 'inventory', label: 'Stock', icon: '🥦' },
-                        { id: 'history', label: 'Ventas', icon: '📜' },
-                        { id: 'sensors', label: 'IoT', icon: '🌡️' },
-                    ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setCurrentTab(tab.id as TabView)}
-                            className={`flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
-                                currentTab === tab.id ? 'bg-dark text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'
-                            }`}
-                        >
-                            <span>{tab.icon}</span> <span>{tab.label}</span>
-                        </button>
-                    ))}
+             {/* GIF Animado (Calavera) en la esquina */}
+             {!gifError && (
+                <div className="absolute bottom-6 right-6 z-20 animate-bounce-soft transition-opacity duration-500">
+                    <img 
+                        src={gifUrl}
+                        alt="Calavera Animada" 
+                        className="w-16 h-16 md:w-24 md:h-24 object-contain mix-blend-screen drop-shadow-lg"
+                        onError={() => setGifError(true)}
+                    />
                 </div>
+             )}
+        </div>
+
+        {/* LADO DERECHO: Formulario */}
+        <div className="md:w-[55%] p-8 lg:p-16 flex flex-col justify-center bg-white relative">
+            <div className="absolute top-6 right-8 flex bg-gray-50 p-1 rounded-full border border-gray-100 z-30">
+                <button 
+                    onClick={() => { setIsAdminMode(false); setError(''); }}
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${!isAdminMode ? 'bg-white text-primary shadow-sm border border-gray-100' : 'text-gray-400'}`}
+                >
+                    Cliente
+                </button>
+                <button 
+                    onClick={() => { setIsAdminMode(true); setError(''); }}
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${isAdminMode ? 'bg-slate-800 text-white shadow-sm' : 'text-gray-400'}`}
+                >
+                    Admin
+                </button>
             </div>
 
-            {/* Content Area */}
-            <div className="max-w-7xl mx-auto px-6 pb-20">
-                {currentTab === 'dashboard' && (
-                    <div className="animate-fade-in space-y-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <StatCard title="Ganancia" value={`$${stats.income.toFixed(2)}`} sub="Total acumulado" icon="💰" colorClass="from-yellow-400 to-orange-500" />
-                            <StatCard title="Pedidos" value={stats.units} sub="Unidades vendidas" icon="📦" colorClass="from-blue-400 to-indigo-500" />
-                            <StatCard title="Top Venta" value={stats.topProduct.name} sub="El favorito" icon="⭐" colorClass="from-orange-400 to-red-500" />
-                            <StatCard title="Box Status" value={boxStatus.isOccupied ? 'Ocupado' : 'Libre'} sub="Estado actual" icon="🏢" colorClass="from-teal-400 to-emerald-500" />
-                        </div>
+            <div className="max-w-sm mx-auto w-full">
+                <div className="mb-8">
+                    <p className="text-primary font-bold text-xs uppercase tracking-widest mb-1">{greeting} 👋</p>
+                    <h2 className="text-3xl font-black text-dark tracking-tight">
+                        {isRegistering ? 'Crear Cuenta' : 'Bienvenido'}
+                    </h2>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    {isRegistering && !isAdminMode && (
+                        <Input label="Tu Nombre" placeholder="Ej. Alex Ruilova" value={name} onChange={(e) => setName(e.target.value)} />
+                    )}
+
+                    <Input
+                        label={isAdminMode ? "Usuario Administrador" : "Correo Electrónico"}
+                        type={isAdminMode ? "text" : "email"}
+                        placeholder={isAdminMode ? "admin" : "ejemplo@correo.com"}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                    />
+
+                    <Input
+                        label="Contraseña"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        error={error}
+                    />
+
+                    <div className="pt-4">
+                        <Button 
+                            type="submit" 
+                            fullWidth 
+                            isLoading={loading} 
+                            className={`py-4 text-base shadow-xl ${isAdminMode ? '!bg-slate-800' : ''}`}
+                        >
+                            {isRegistering ? 'Registrarme' : 'Entrar ahora'}
+                        </Button>
                     </div>
-                )}
+                </form>
 
-                {currentTab === 'inventory' && (
-                    <div className="animate-fade-in grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {PRODUCTS.map(prod => {
-                            const isAvailable = inventory[prod.id.toString()] !== false;
-                            return (
-                                <Card key={prod.id} className="p-6">
-                                    <div className="flex gap-4 mb-4">
-                                        <img src={prod.image} className={`w-20 h-20 rounded-2xl object-cover ${!isAvailable ? 'grayscale opacity-50' : ''}`} />
-                                        <div>
-                                            <h4 className="font-bold text-dark text-lg">{prod.name}</h4>
-                                            <Badge type={prod.type} className="scale-75 origin-left" />
-                                        </div>
-                                    </div>
-                                    <Button variant={isAvailable ? 'primary' : 'outline'} fullWidth onClick={() => toggleProduct(prod.id, !isAvailable)}>
-                                        {isAvailable ? 'En Stock ✓' : 'Marcar disponible'}
-                                    </Button>
-                                </Card>
-                            );
-                        })}
-                    </div>
-                )}
+                {!isAdminMode && (
+                    <div className="mt-8 animate-fade-in text-center">
+                        <button 
+                            onClick={loginAnonymously}
+                            className="text-gray-400 hover:text-primary font-bold text-sm transition-colors mb-6"
+                        >
+                            Ver menú como invitado 👀
+                        </button>
 
-                {currentTab === 'history' && (
-                    <div className="animate-fade-in space-y-6">
-                        <Input placeholder="🔍 Buscar por nombre o ID..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} icon="🔎" />
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {filteredOrders.map(order => (
-                                <Card key={order.id} className="p-5 border-l-4 border-primary">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <p className="text-sm font-black text-dark">{order.customerDetails?.name || 'Cliente'}</p>
-                                        <Badge type={order.status === 'delivered' ? 'Entregado' : 'Listo'} className="scale-75" />
-                                    </div>
-                                    <div className="flex justify-between items-center text-xs text-gray-400">
-                                        <span>#{order.id}</span>
-                                        <span className="font-bold text-primary">${order.total.toFixed(2)}</span>
-                                    </div>
-                                </Card>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {currentTab === 'sensors' && (
-                    <div className="animate-fade-in space-y-10">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <Card className="p-12 text-center border-b-8 border-red-500 shadow-xl">
-                                <div className="text-6xl mb-4">🔥</div>
-                                <p className="text-gray-400 font-bold uppercase text-xs mb-2">Sensor Caliente</p>
-                                <div className="text-8xl font-black text-red-600">{realTemps.hot}°C</div>
-                            </Card>
-                            <Card className="p-12 text-center border-b-8 border-teal-500 shadow-xl">
-                                <div className="text-6xl mb-4">❄️</div>
-                                <p className="text-gray-400 font-bold uppercase text-xs mb-2">Sensor Frío</p>
-                                <div className="text-8xl font-black text-teal-600">{realTemps.cold}°C</div>
-                            </Card>
-                        </div>
-
-                        <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-gray-100">
-                            <div className="flex items-center justify-between mb-10">
-                                <h3 className="font-black text-dark text-xl uppercase tracking-tighter italic">Simulador de Sensores</h3>
-                                <button onClick={() => setIsSimMode(!isSimMode)} className={`w-16 h-8 rounded-full transition-all flex items-center px-1 ${isSimMode ? 'bg-primary' : 'bg-gray-200'}`}>
-                                    <div className={`w-6 h-6 bg-white rounded-full transition-all ${isSimMode ? 'translate-x-8' : ''}`}></div>
-                                </button>
-                            </div>
-                            {isSimMode && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-16 animate-slide-up">
-                                    <div><p className="text-xs font-bold text-gray-400 mb-4">Ajustar Calor (°C)</p><input type="range" min="40" max="90" value={realTemps.hot} onChange={(e) => handleTempChange('hot', parseInt(e.target.value))} className="w-full h-2 bg-red-100 rounded-lg appearance-none cursor-pointer accent-red-600" /></div>
-                                    <div><p className="text-xs font-bold text-gray-400 mb-4">Ajustar Frío (°C)</p><input type="range" min="-10" max="15" value={realTemps.cold} onChange={(e) => handleTempChange('cold', parseInt(e.target.value))} className="w-full h-2 bg-teal-100 rounded-lg appearance-none cursor-pointer accent-teal-600" /></div>
-                                </div>
-                            )}
-                        </div>
+                        <p className="text-sm text-gray-500 font-medium border-t pt-6">
+                            {isRegistering ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}
+                            <button 
+                                onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
+                                className="ml-2 font-black text-primary hover:underline"
+                            >
+                                {isRegistering ? 'Inicia Sesión' : 'Regístrate'}
+                            </button>
+                        </p>
                     </div>
                 )}
             </div>
-        </PageLayout>
-    );
+        </div>
+      </div>
+    </div>
+  );
 };

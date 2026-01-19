@@ -15,7 +15,7 @@ La idea es simple pero potente: haces tu pedido desde la app, la cocina lo prepa
 - **Frontend**: React + TypeScript.
 - **Estilos**: Tailwind CSS para un diseño limpio y moderno.
 - **Backend**: Firebase (Firestore para datos en tiempo real y Auth para usuarios).
-- **Hardware**: Integración preparada para ESP32,caja inteligente.
+- **Hardware**: Integración preparada para ESP32.
 
 ---
-Desarrollado con ❤️ para mejorar la experiencia de usuarios en restaurantes modernos.
+Desarrollado con ❤️ para mejorar la experiencia de usuario en restaurantes modernos.
