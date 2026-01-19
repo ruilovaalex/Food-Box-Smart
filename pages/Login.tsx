@@ -1,236 +1,197 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useMqtt } from '../context/MqttContext';
 import { useAuth } from '../context/AuthContext';
-import { Button, Input } from '../components/UI';
+import { Card, Button, PageLayout, Badge, Input } from '../components/UI';
+import { useNavigate } from 'react-router-dom';
+import { database } from '../services/database';
+import { PRODUCTS } from '../constants';
 
-export const Login: React.FC = () => {
-  const { login, register, loginAnonymously } = useAuth();
-  
-  const [isAdminMode, setIsAdminMode] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
-  
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+type TabView = 'dashboard' | 'inventory' | 'history' | 'sensors';
 
-  // Rutas absolutas para asegurar carga desde el root
-  const logoUrl = '/images/logo.png';
-  const gifUrl = '/images/calavera.gif';
-  
-  const [logoError, setLogoError] = useState(false);
-  const [gifVisible, setGifVisible] = useState(true);
+const StatCard: React.FC<{ title: string, value: string | number, sub: string, icon: string, colorClass: string }> = ({ title, value, sub, icon, colorClass }) => (
+    <div className="relative overflow-hidden bg-white rounded-[2rem] p-6 shadow-lg border border-gray-100 transition-all duration-300">
+        <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${colorClass} opacity-10 rounded-bl-[3rem]`}></div>
+        <div className="relative z-10">
+            <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${colorClass} flex items-center justify-center text-white text-2xl mb-4 shadow-sm`}>{icon}</div>
+            <h3 className="text-3xl font-black text-dark tracking-tight mb-1">{value}</h3>
+            <p className="text-gray-500 font-bold text-xs uppercase tracking-wider mb-1">{title}</p>
+            <p className="text-gray-400 text-xs">{sub}</p>
+        </div>
+    </div>
+);
 
-  const [greeting, setGreeting] = useState('');
-  useEffect(() => {
-    const hours = new Date().getHours();
-    if (hours < 12) setGreeting('Buenos días');
-    else if (hours < 18) setGreeting('Buenas tardes');
-    else setGreeting('Buenas noches');
-  }, []);
+export const AdminDashboard: React.FC = () => {
+    const { orders, resetDatabase, realTemps, boxStatus, inventory, toggleProduct } = useMqtt();
+    const { logout } = useAuth();
+    const navigate = useNavigate();
+    
+    const [currentTab, setCurrentTab] = useState<TabView>('dashboard');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isResetting, setIsResetting] = useState(false);
+    const [isSimMode, setIsSimMode] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+    const stats = useMemo(() => {
+        const productCounts: { [id: number]: { name: string, count: number } } = {};
+        const customerCounts: { [name: string]: { totalSpent: number, count: number } } = {};
+        let income = 0;
+        let units = 0;
 
-    try {
-        if (isAdminMode) {
-            const adminEmail = email.toLowerCase().includes('@') ? email.toLowerCase() : `${email.toLowerCase()}@foodbox.com`;
-            try {
-                await login(adminEmail, password);
-            } catch (loginErr: any) {
-                const isPossibleNewUser = 
-                    loginErr.code === 'auth/user-not-found' || 
-                    loginErr.code === 'auth/invalid-credential';
-                if (isPossibleNewUser) {
-                    await register("Administrador", adminEmail, password);
-                } else {
-                    throw loginErr;
-                }
-            }
-        } else {
-            if (isRegistering) {
-                if (!name.trim()) throw new Error("El nombre es obligatorio.");
-                await register(name, email, password);
-            } else {
-                await login(email, password);
-            }
-        }
-    } catch (err: any) {
-        let msg = "Error de acceso.";
-        if (err.code === 'auth/invalid-email') msg = "Correo inválido.";
-        if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') msg = "Credenciales incorrectas.";
-        if (err.code === 'auth/email-already-in-use') msg = "Este correo ya está registrado.";
-        if (err.message) msg = err.message;
-        setError(msg);
-        setLoading(false);
-    }
-  };
+        orders.forEach(o => {
+            if (o.status === 'cancelled') return;
+            income += (o.total || 0);
+            o.items?.forEach(item => {
+                units += item.quantity;
+                if (!productCounts[item.id]) productCounts[item.id] = { name: item.name, count: 0 };
+                productCounts[item.id].count += item.quantity;
+            });
+            const custName = o.customerDetails?.name || 'Usuario';
+            if (!customerCounts[custName]) customerCounts[custName] = { totalSpent: 0, count: 0 };
+            customerCounts[custName].totalSpent += o.total;
+            customerCounts[custName].count += 1;
+        });
 
-  const handleGuestLogin = async () => {
-      setLoading(true);
-      setError('');
-      try {
-          await loginAnonymously();
-      } catch (err: any) {
-          setError("Error en acceso invitado.");
-          setLoading(false);
-      }
-  };
+        const sortedProds = Object.entries(productCounts).sort((a,b) => b[1].count - a[1].count);
+        return {
+            income, units,
+            topProduct: sortedProds[0]?.[1] || { name: 'N/A', count: 0 },
+            worstProduct: sortedProds[sortedProds.length-1]?.[1] || { name: 'N/A', count: 0 },
+            topCustomers: Object.entries(customerCounts).sort((a,b) => b[1].totalSpent - a[1].totalSpent).slice(0, 3)
+        };
+    }, [orders]);
 
-  return (
-    <div className={`min-h-screen w-full flex items-center justify-center p-4 lg:p-8 relative overflow-hidden transition-colors duration-500 ${isAdminMode ? 'bg-slate-900' : 'bg-[#FFF9F5]'}`}>
-      
-      <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
-          <div className={`grid grid-cols-6 md:grid-cols-8 gap-8 md:gap-16 transform -rotate-12 scale-110 transition-opacity duration-500 ${isAdminMode ? 'opacity-[0.03]' : 'opacity-20 grayscale-[20%]'}`}>
-              {Array.from({ length: 80 }).map((_, i) => (
-                  <div key={i} className="text-4xl md:text-6xl animate-pulse" style={{ animationDuration: `${3 + Math.random() * 4}s` }}>
-                      {['🍔', '🍕', '🍟', '🌭', '🌮', '🍦', '🍩', '🥤'][i % 8]}
-                  </div>
-              ))}
-          </div>
-      </div>
+    const filteredOrders = orders.filter(o => {
+        const term = searchTerm.toLowerCase();
+        return (o.id || '').toLowerCase().includes(term) || (o.customerDetails?.name || '').toLowerCase().includes(term);
+    });
 
-      <div className="w-full max-w-5xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10 min-h-[600px] animate-fade-in border border-white/50">
-        
-        <div className={`md:w-[45%] p-8 lg:p-14 flex flex-col items-center justify-center relative overflow-hidden text-center transition-colors duration-500 ${isAdminMode ? 'bg-slate-800' : 'bg-[#FF8A2B]'}`}>
-             <div className="absolute inset-0 pointer-events-none overflow-hidden select-none opacity-10">
-                <div className="grid grid-cols-4 gap-8 transform rotate-12 scale-125">
-                    {Array.from({ length: 40 }).map((_, i) => (
-                        <div key={i} className="text-5xl text-white">
-                            {['🍔', '🍟', '🥤', '🍕'][i % 4]}
-                        </div>
+    const handleTempChange = async (type: 'hot' | 'cold', val: number) => {
+        const newTemps = { ...realTemps, [type]: val };
+        await database.updateSensors(newTemps.hot, newTemps.cold);
+    };
+
+    return (
+        <PageLayout className="bg-[#F3F4F6]">
+            {/* Header */}
+            <div className="bg-dark text-white rounded-b-[3rem] pt-10 pb-16 px-6 shadow-2xl relative overflow-hidden mb-10">
+                 <div className="absolute top-0 right-0 w-96 h-96 bg-primary opacity-20 rounded-full blur-3xl"></div>
+                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6 max-w-7xl mx-auto">
+                     <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 text-3xl">🛠️</div>
+                        <div><h2 className="text-gray-400 font-bold text-xs uppercase tracking-widest mb-1">Administración</h2><h1 className="text-3xl font-black">Panel Food Box</h1></div>
+                     </div>
+                     <Button variant="secondary" onClick={() => { logout(); navigate('/'); }} className="!bg-white/10 !text-white border-white/20">Cerrar Sesión</Button>
+                 </div>
+            </div>
+
+            {/* Nav Tabs */}
+            <div className="max-w-7xl mx-auto px-6 -mt-16 relative z-20 mb-10">
+                <div className="bg-white p-2 rounded-2xl shadow-xl flex gap-2 overflow-x-auto no-scrollbar border border-gray-100">
+                    {[
+                        { id: 'dashboard', label: 'Resumen', icon: '📊' },
+                        { id: 'inventory', label: 'Stock', icon: '🥦' },
+                        { id: 'history', label: 'Ventas', icon: '📜' },
+                        { id: 'sensors', label: 'IoT', icon: '🌡️' },
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setCurrentTab(tab.id as TabView)}
+                            className={`flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
+                                currentTab === tab.id ? 'bg-dark text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'
+                            }`}
+                        >
+                            <span>{tab.icon}</span> <span>{tab.label}</span>
+                        </button>
                     ))}
                 </div>
-             </div>
-
-             <div className="relative z-10 mb-4 md:mb-8 transform hover:scale-105 transition-transform duration-500 group cursor-pointer flex items-center justify-center">
-                {!logoError ? (
-                    <img 
-                        src={logoUrl}
-                        alt="Food Box Smart Logo" 
-                        className="w-32 h-32 md:w-56 md:h-56 lg:w-72 lg:h-72 object-contain drop-shadow-2xl relative z-10" 
-                        onError={() => setLogoError(true)}
-                    />
-                ) : (
-                    <div className="w-32 h-32 md:w-56 md:h-56 lg:w-72 lg:h-72 flex items-center justify-center text-7xl md:text-9xl drop-shadow-2xl">
-                        🍔
-                    </div>
-                )}
-             </div>
-             
-             <h1 className="relative z-10 text-3xl md:text-4xl lg:text-5xl font-black text-white mb-2 tracking-tight">Food Box Smart</h1>
-             <p className="relative z-10 text-white/90 text-sm md:text-lg font-medium">
-                {isAdminMode ? 'Panel de Administración' : 'Tu comida favorita, sin filas.'}
-             </p>
-
-             {gifVisible && (
-                <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-20 opacity-90 animate-bounce-soft">
-                    <img 
-                        src={gifUrl}
-                        alt="Fun" 
-                        className="w-20 h-20 md:w-28 md:h-28 lg:w-36 lg:h-36 object-contain drop-shadow-lg mix-blend-screen"
-                        onError={() => setGifVisible(false)}
-                    />
-                </div>
-             )}
-        </div>
-
-        <div className="md:w-[55%] p-6 md:p-8 lg:p-14 flex flex-col justify-center bg-white relative">
-            <div className="absolute top-4 right-4 lg:top-10 lg:right-10 flex bg-gray-50 p-1 rounded-full border border-gray-100 z-30">
-                <button 
-                    onClick={() => { setIsAdminMode(false); setIsRegistering(false); setError(''); }}
-                    className={`px-3 py-1 md:px-4 md:py-1.5 rounded-full text-xs font-bold transition-all ${!isAdminMode ? 'bg-white text-primary shadow-sm border border-gray-100' : 'text-gray-400'}`}
-                >
-                    Cliente
-                </button>
-                <button 
-                    onClick={() => { setIsAdminMode(true); setIsRegistering(false); setError(''); }}
-                    className={`px-3 py-1 md:px-4 md:py-1.5 rounded-full text-xs font-bold transition-all ${isAdminMode ? 'bg-slate-800 text-white shadow-sm' : 'text-gray-400'}`}
-                >
-                    Admin
-                </button>
             </div>
 
-            <div className="max-w-sm mx-auto w-full mt-8 md:mt-0">
-                <div className="mb-6 md:mb-8 text-center md:text-left">
-                    <p className="text-primary font-bold text-xs uppercase tracking-widest mb-2">
-                        {greeting} 👋
-                    </p>
-                    <h2 className="text-2xl md:text-3xl font-black text-dark tracking-tight">
-                        {isRegistering ? 'Crear Cuenta' : 'Iniciar Sesión'}
-                    </h2>
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {isRegistering && !isAdminMode && (
-                        <Input
-                            label="Nombre Completo"
-                            placeholder="Ej. Alex Ruilova"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                        />
-                    )}
-
-                    <Input
-                        label={isAdminMode ? "Usuario Admin" : "Correo Electrónico"}
-                        type={isAdminMode ? "text" : "email"}
-                        placeholder={isAdminMode ? "admin" : "alex@ejemplo.com"}
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                    />
-
-                    <Input
-                        label="Contraseña"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        error={error}
-                    />
-
-                    <div className="pt-2">
-                        <Button 
-                            type="submit" 
-                            fullWidth 
-                            isLoading={loading} 
-                            className={`py-3 md:py-4 text-base shadow-xl ${isAdminMode ? 'bg-slate-800' : ''}`}
-                            style={isAdminMode ? { backgroundColor: '#1e293b', color: 'white' } : {}}
-                        >
-                            {loading ? 'Cargando...' : 'Ingresar ahora'}
-                        </Button>
+            {/* Content Area */}
+            <div className="max-w-7xl mx-auto px-6 pb-20">
+                {currentTab === 'dashboard' && (
+                    <div className="animate-fade-in space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <StatCard title="Ganancia" value={`$${stats.income.toFixed(2)}`} sub="Total acumulado" icon="💰" colorClass="from-yellow-400 to-orange-500" />
+                            <StatCard title="Pedidos" value={stats.units} sub="Unidades vendidas" icon="📦" colorClass="from-blue-400 to-indigo-500" />
+                            <StatCard title="Top Venta" value={stats.topProduct.name} sub="El favorito" icon="⭐" colorClass="from-orange-400 to-red-500" />
+                            <StatCard title="Box Status" value={boxStatus.isOccupied ? 'Ocupado' : 'Libre'} sub="Estado actual" icon="🏢" colorClass="from-teal-400 to-emerald-500" />
+                        </div>
                     </div>
-                </form>
+                )}
 
-                {!isAdminMode && (
-                    <div className="mt-6 animate-fade-in">
-                        <Button 
-                            type="button"
-                            variant="secondary"
-                            fullWidth
-                            onClick={handleGuestLogin}
-                            className="text-gray-500 py-3"
-                        >
-                            👀 Ver menú como Invitado
-                        </Button>
+                {currentTab === 'inventory' && (
+                    <div className="animate-fade-in grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {PRODUCTS.map(prod => {
+                            const isAvailable = inventory[prod.id.toString()] !== false;
+                            return (
+                                <Card key={prod.id} className="p-6">
+                                    <div className="flex gap-4 mb-4">
+                                        <img src={prod.image} className={`w-20 h-20 rounded-2xl object-cover ${!isAvailable ? 'grayscale opacity-50' : ''}`} />
+                                        <div>
+                                            <h4 className="font-bold text-dark text-lg">{prod.name}</h4>
+                                            <Badge type={prod.type} className="scale-75 origin-left" />
+                                        </div>
+                                    </div>
+                                    <Button variant={isAvailable ? 'primary' : 'outline'} fullWidth onClick={() => toggleProduct(prod.id, !isAvailable)}>
+                                        {isAvailable ? 'En Stock ✓' : 'Marcar disponible'}
+                                    </Button>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                )}
 
-                        <p className="text-center text-sm text-gray-500 mt-6 font-medium">
-                            {isRegistering ? '¿Ya tienes una cuenta?' : '¿Nuevo aquí?'}
-                            <button 
-                                onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
-                                className="ml-2 font-bold text-primary underline underline-offset-4"
-                            >
-                                {isRegistering ? 'Inicia Sesión' : 'Crea una cuenta'}
-                            </button>
-                        </p>
+                {currentTab === 'history' && (
+                    <div className="animate-fade-in space-y-6">
+                        <Input placeholder="🔍 Buscar por nombre o ID..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} icon="🔎" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredOrders.map(order => (
+                                <Card key={order.id} className="p-5 border-l-4 border-primary">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <p className="text-sm font-black text-dark">{order.customerDetails?.name || 'Cliente'}</p>
+                                        <Badge type={order.status === 'delivered' ? 'Entregado' : 'Listo'} className="scale-75" />
+                                    </div>
+                                    <div className="flex justify-between items-center text-xs text-gray-400">
+                                        <span>#{order.id}</span>
+                                        <span className="font-bold text-primary">${order.total.toFixed(2)}</span>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {currentTab === 'sensors' && (
+                    <div className="animate-fade-in space-y-10">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <Card className="p-12 text-center border-b-8 border-red-500 shadow-xl">
+                                <div className="text-6xl mb-4">🔥</div>
+                                <p className="text-gray-400 font-bold uppercase text-xs mb-2">Sensor Caliente</p>
+                                <div className="text-8xl font-black text-red-600">{realTemps.hot}°C</div>
+                            </Card>
+                            <Card className="p-12 text-center border-b-8 border-teal-500 shadow-xl">
+                                <div className="text-6xl mb-4">❄️</div>
+                                <p className="text-gray-400 font-bold uppercase text-xs mb-2">Sensor Frío</p>
+                                <div className="text-8xl font-black text-teal-600">{realTemps.cold}°C</div>
+                            </Card>
+                        </div>
+
+                        <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-gray-100">
+                            <div className="flex items-center justify-between mb-10">
+                                <h3 className="font-black text-dark text-xl uppercase tracking-tighter italic">Simulador de Sensores</h3>
+                                <button onClick={() => setIsSimMode(!isSimMode)} className={`w-16 h-8 rounded-full transition-all flex items-center px-1 ${isSimMode ? 'bg-primary' : 'bg-gray-200'}`}>
+                                    <div className={`w-6 h-6 bg-white rounded-full transition-all ${isSimMode ? 'translate-x-8' : ''}`}></div>
+                                </button>
+                            </div>
+                            {isSimMode && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-16 animate-slide-up">
+                                    <div><p className="text-xs font-bold text-gray-400 mb-4">Ajustar Calor (°C)</p><input type="range" min="40" max="90" value={realTemps.hot} onChange={(e) => handleTempChange('hot', parseInt(e.target.value))} className="w-full h-2 bg-red-100 rounded-lg appearance-none cursor-pointer accent-red-600" /></div>
+                                    <div><p className="text-xs font-bold text-gray-400 mb-4">Ajustar Frío (°C)</p><input type="range" min="-10" max="15" value={realTemps.cold} onChange={(e) => handleTempChange('cold', parseInt(e.target.value))} className="w-full h-2 bg-teal-100 rounded-lg appearance-none cursor-pointer accent-teal-600" /></div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
-        </div>
-      </div>
-    </div>
-  );
+        </PageLayout>
+    );
 };
