@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useMqtt } from '../context/MqttContext';
 import { useAuth } from '../context/AuthContext';
@@ -187,6 +186,82 @@ export const AdminDashboard: React.FC = () => {
                                             </tr>
                                         );
                                     })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {currentTab === 'history' && (
+                    <div className="animate-fade-in bg-white rounded-[3rem] shadow-xl border border-gray-100 overflow-hidden">
+                        <div className="p-10 border-b border-gray-50 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-2xl font-black text-dark tracking-tight">Registro Maestro de Ventas</h3>
+                                <p className="text-gray-400 text-sm font-medium">Historial completo de pedidos realizados en la plataforma.</p>
+                            </div>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-gray-50/50">
+                                    <tr>
+                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Pedido ID</th>
+                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Cliente / Fecha</th>
+                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Productos</th>
+                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Total</th>
+                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {orders.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="px-10 py-20 text-center">
+                                                <p className="text-gray-400 font-bold uppercase tracking-widest">No hay ventas registradas aún</p>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        orders.map(order => (
+                                            <tr key={order.id} className="hover:bg-gray-50/50 transition-colors group">
+                                                <td className="px-10 py-6">
+                                                    <span className="font-mono font-black text-dark text-sm">{order.id}</span>
+                                                </td>
+                                                <td className="px-10 py-6">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold text-dark uppercase text-xs">{order.customerDetails?.name || order.userEmail || 'Invitado'}</span>
+                                                        <span className="text-[10px] text-gray-400">{new Date(order.createdAt).toLocaleString()}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-10 py-6">
+                                                    <div className="flex -space-x-3 overflow-hidden">
+                                                        {order.items.slice(0, 3).map((item, i) => (
+                                                            <div key={i} className="inline-block h-8 w-8 rounded-full ring-2 ring-white overflow-hidden bg-gray-100">
+                                                                <img src={item.image} alt="" className="h-full w-full object-cover" />
+                                                            </div>
+                                                        ))}
+                                                        {order.items.length > 3 && (
+                                                            <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-[10px] font-black text-gray-400 ring-2 ring-white">
+                                                                +{order.items.length - 3}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-10 py-6">
+                                                    <span className="font-black text-primary text-lg tracking-tighter">${order.total.toFixed(2)}</span>
+                                                </td>
+                                                <td className="px-10 py-6 text-right">
+                                                    <Badge 
+                                                        type={order.status} 
+                                                        className={`${
+                                                            order.status === 'delivered' ? 'bg-green-50 text-green-600' : 
+                                                            order.status === 'ready' ? 'bg-blue-50 text-blue-600' : 
+                                                            'bg-orange-50 text-orange-600'
+                                                        }`}
+                                                    >
+                                                        {order.status}
+                                                    </Badge>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
