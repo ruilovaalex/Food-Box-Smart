@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { PRODUCTS } from '../constants';
 import { useCart } from '../context/CartContext';
@@ -18,29 +17,40 @@ export const Menu: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'hot' | 'cold' | 'favs'>('all');
   const [favorites, setFavorites] = useState<number[]>([]);
   const [showNotifCenter, setShowNotifCenter] = useState(false);
-  const offerTriggered = useRef(false);
+  const offerChecked = useRef(false);
 
   useEffect(() => {
-    const savedFavs = localStorage.getItem(`favs_${user?.id}`);
+    if (!user) return;
+
+    // 1. Cargar favoritos
+    const savedFavs = localStorage.getItem(`favs_${user.id}`);
     if (savedFavs) {
       setFavorites(JSON.parse(savedFavs));
     }
 
-    if (!offerTriggered.current) {
-      const offerProds = PRODUCTS.filter(p => p.onSale);
-      if (offerProds.length > 0) {
-        const randomOffer = offerProds[Math.floor(Math.random() * offerProds.length)];
-        setTimeout(() => {
-          addNotification({
-            title: "✨ ¡SUPER OFERTA! ✨",
-            body: `No te pierdas: ${randomOffer.name} a solo $${randomOffer.price.toFixed(2)}`,
-            type: 'offer'
-          });
-        }, 1200);
+    // 2. Lógica de Oferta Diaria (1 vez al día)
+    if (!offerChecked.current) {
+      const today = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
+      const lastOfferDate = localStorage.getItem(`last_offer_date_${user.id}`);
+
+      if (lastOfferDate !== today) {
+        const offerProds = PRODUCTS.filter(p => p.onSale);
+        if (offerProds.length > 0) {
+          const randomOffer = offerProds[Math.floor(Math.random() * offerProds.length)];
+          setTimeout(() => {
+            addNotification({
+              title: "✨ ¡SUPER OFERTA! ✨",
+              body: `No te pierdas: ${randomOffer.name} a solo $${randomOffer.price.toFixed(2)}`,
+              type: 'offer'
+            });
+            // Guardar que ya se mostró hoy
+            localStorage.setItem(`last_offer_date_${user.id}`, today);
+          }, 1200);
+        }
       }
-      offerTriggered.current = true;
+      offerChecked.current = true;
     }
-  }, [user?.id, addNotification]);
+  }, [user, addNotification]);
 
   const toggleFavorite = (e: React.MouseEvent, productId: number) => {
     e.stopPropagation();
