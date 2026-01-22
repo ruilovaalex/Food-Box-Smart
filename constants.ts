@@ -4,79 +4,79 @@ import { Product } from './types';
 export const PRODUCTS: Product[] = [
   {
     id: 1,
-    name: "Hamburguesa + Papas",
-    price: 6.80,
-    originalPrice: 8.50,
+    name: "Burger Supreme + Fries",
+    price: 7.50,
+    originalPrice: 9.00,
     type: 'hot',
     onSale: true,
-    saleText: "20% OFF",
-    image: "https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?q=80&w=800&auto=format&fit=crop" 
+    saleText: "OFERTA HOY",
+    image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=800&auto=format&fit=crop" 
   },
   {
     id: 2,
-    name: "Ramen Tonkotsu",
+    name: "Ramen Tonkotsu Pro",
     price: 12.00,
     type: 'hot',
     image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?q=80&w=800&auto=format&fit=crop"
   },
   {
     id: 3,
-    name: "Helado de Cono",
-    price: 2.50,
+    name: "Sushi Roll Premium",
+    price: 14.50,
     type: 'cold',
-    image: "https://images.unsplash.com/photo-1501443762994-82bd5dace89a?q=80&w=800&auto=format&fit=crop"
+    image: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=800&auto=format&fit=crop"
   },
   {
     id: 4,
-    name: "Té Frío Matcha",
-    price: 2.10,
-    originalPrice: 3.50,
+    name: "Smoothie Bowl Acai",
+    price: 6.50,
+    originalPrice: 8.00,
     type: 'cold',
     onSale: true,
-    saleText: "REBAJADO",
-    image: "https://images.unsplash.com/photo-1499638673689-79a0b5115d87?q=80&w=800&auto=format&fit=crop"
+    saleText: "HEALTHY DAY",
+    image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800&auto=format&fit=crop"
   },
   {
     id: 5,
-    name: "Pizza Pepperoni",
-    price: 9.99,
+    name: "Pizza Pepperoni XL",
+    price: 10.99,
     type: 'hot',
     image: "https://images.unsplash.com/photo-1628840042765-356cda07504e?q=80&w=800&auto=format&fit=crop"
   },
   {
     id: 6,
-    name: "Tacos al Pastor",
-    price: 7.50,
+    name: "Tacos al Pastor (x3)",
+    price: 8.50,
     type: 'hot',
     image: "https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?q=80&w=800&auto=format&fit=crop"
   },
   {
     id: 7,
-    name: "Sushi Roll Salmón",
-    price: 14.00,
+    name: "Ensalada César Pollo",
+    price: 9.00,
     type: 'cold',
-    image: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=800&auto=format&fit=crop"
+    image: "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?q=80&w=800&auto=format&fit=crop"
   },
   {
     id: 8,
-    name: "Bowl de Frutas",
-    price: 5.50,
+    name: "Iced Caramel Macchiato",
+    price: 4.50,
     type: 'cold',
-    image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800&auto=format&fit=crop"
+    image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?q=80&w=800&auto=format&fit=crop"
   },
   {
     id: 9,
-    name: "Pasta Carbonara",
-    price: 11.50,
+    name: "Lasagna Bolognesa",
+    price: 11.00,
     type: 'hot',
-    image: "https://images.unsplash.com/photo-1612874742237-6526221588e3?q=80&w=800&auto=format&fit=crop"
+    image: "https://images.unsplash.com/photo-1619895092538-128341789043?q=80&w=800&auto=format&fit=crop"
   },
   {
     id: 10,
-    name: "Ensalada César",
-    price: 8.00,
+    name: "Poke Bowl Salmón",
+    price: 13.00,
     type: 'cold',
-    image: "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?q=80&w=800&auto=format&fit=crop"
+    image: "https://images.unsplash.com/photo-1546069901-e579a6ad3358?q=80&w=800&auto=format&fit=crop"
   }
 ];
 

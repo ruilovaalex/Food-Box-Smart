@@ -32,70 +32,41 @@ export const AdminDashboard: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isSimMode, setIsSimMode] = useState(false);
     
-    // Referencias para evitar spam de notificaciones
     const lastAlertTime = useRef({ hot: 0, cold: 0 });
 
     const tempAlerts = useMemo(() => {
         const alerts: { msg: string; type: 'warning' | 'critical' }[] = [];
         const now = Date.now();
-        const COOLDOWN = 60000; // 1 minuto de cooldown entre notificaciones push del mismo sensor
+        const COOLDOWN = 60000;
 
         if (realTemps.hot < 60) {
-            alerts.push({ msg: "Calor Insuficiente: Riesgo de bacterias", type: 'critical' });
+            alerts.push({ msg: "Calor Crítico: Temperatura insuficiente", type: 'critical' });
             if (now - lastAlertTime.current.hot > COOLDOWN) {
-                addNotification({ title: "🚨 ALERTA CALOR", body: "Temperatura del módulo caliente por debajo de 60°C", type: 'critical' });
+                addNotification({ title: "🚨 FALLA CALOR", body: "Temperatura del casillero caliente por debajo de 60°C", type: 'critical' });
                 lastAlertTime.current.hot = now;
             }
-        } else if (realTemps.hot > 85) {
-            alerts.push({ msg: "Calor Excesivo: Riesgo de sobrecocción", type: 'warning' });
         }
-
         if (realTemps.cold > 8) {
-            alerts.push({ msg: "Pérdida de Frío: Riesgo de descomposición", type: 'critical' });
+            alerts.push({ msg: "Frío Crítico: Pérdida de refrigeración", type: 'critical' });
             if (now - lastAlertTime.current.cold > COOLDOWN) {
-                addNotification({ title: "❄️ ALERTA FRÍO", body: "Módulo frío ha superado los 8°C. ¡Acción requerida!", type: 'critical' });
+                addNotification({ title: "❄️ FALLA FRÍO", body: "Temperatura del casillero frío ha superado los 8°C", type: 'critical' });
                 lastAlertTime.current.cold = now;
             }
-        } else if (realTemps.cold < -2) {
-            alerts.push({ msg: "Frío Extremo: Riesgo de congelación", type: 'warning' });
         }
-        
         return alerts;
     }, [realTemps, addNotification]);
 
     const stats = useMemo(() => {
-        const productCounts: { [id: number]: { name: string, count: number } } = {};
-        const customerCounts: { [name: string]: { totalSpent: number, count: number } } = {};
         let income = 0;
         let units = 0;
-
         orders.forEach(o => {
-            if (o.status === 'cancelled') return;
-            income += (o.total || 0);
-            o.items?.forEach(item => {
-                units += item.quantity;
-                if (!productCounts[item.id]) productCounts[item.id] = { name: item.name, count: 0 };
-                productCounts[item.id].count += item.quantity;
-            });
-            const custName = o.customerDetails?.name || 'Usuario';
-            if (!customerCounts[custName]) customerCounts[custName] = { totalSpent: 0, count: 0 };
-            customerCounts[custName].totalSpent += o.total;
-            customerCounts[custName].count += 1;
+            if (o.status !== 'cancelled') {
+                income += (o.total || 0);
+                o.items?.forEach(i => units += i.quantity);
+            }
         });
-
-        const sortedProds = Object.entries(productCounts).sort((a,b) => b[1].count - a[1].count);
-        return {
-            income, units,
-            topProduct: sortedProds[0]?.[1] || { name: 'N/A', count: 0 },
-            worstProduct: sortedProds[sortedProds.length-1]?.[1] || { name: 'N/A', count: 0 },
-            topCustomers: Object.entries(customerCounts).sort((a,b) => b[1].totalSpent - a[1].totalSpent).slice(0, 3)
-        };
+        return { income, units };
     }, [orders]);
-
-    const filteredOrders = orders.filter(o => {
-        const term = searchTerm.toLowerCase();
-        return (o.id || '').toLowerCase().includes(term) || (o.customerDetails?.name || '').toLowerCase().includes(term);
-    });
 
     const handleTempChange = async (type: 'hot' | 'cold', val: number) => {
         const newTemps = { ...realTemps, [type]: val };
@@ -104,37 +75,35 @@ export const AdminDashboard: React.FC = () => {
 
     return (
         <PageLayout className="bg-[#F3F4F6]">
-            <div className="bg-dark text-white rounded-b-[3rem] pt-10 pb-16 px-6 shadow-2xl relative overflow-hidden mb-10">
-                 <div className="absolute top-0 right-0 w-96 h-96 bg-primary opacity-20 rounded-full blur-3xl"></div>
-                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6 max-w-7xl mx-auto">
-                     <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 text-3xl">🛠️</div>
-                        <div><h2 className="text-gray-400 font-bold text-xs uppercase tracking-widest mb-1">Administración</h2><h1 className="text-3xl font-black">Panel Food Box</h1></div>
+            <div className="bg-dark text-white rounded-b-[4rem] pt-12 pb-20 px-8 shadow-2xl relative overflow-hidden mb-12">
+                 <div className="absolute top-0 right-0 w-96 h-96 bg-primary opacity-10 rounded-full blur-3xl"></div>
+                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8 max-w-7xl mx-auto">
+                     <div className="flex items-center gap-6">
+                        <div className="w-20 h-20 bg-white/10 backdrop-blur-2xl rounded-3xl flex items-center justify-center border border-white/20 text-4xl shadow-2xl">⚡</div>
+                        <div>
+                            <h2 className="text-primary font-black text-xs uppercase tracking-[0.3em] mb-1">Master Control</h2>
+                            <h1 className="text-4xl font-black tracking-tighter">Food Box Admin</h1>
+                        </div>
                      </div>
-                     <div className="flex items-center gap-3">
-                         {tempAlerts.length > 0 && (
-                             <div className="flex items-center gap-2 bg-red-500/20 px-4 py-2 rounded-xl animate-pulse">
-                                 <span className="text-sm font-black text-red-400">🚨 {tempAlerts.length} ALERTAS</span>
-                             </div>
-                         )}
-                         <Button variant="secondary" onClick={() => { logout(); navigate('/'); }} className="!bg-white/10 !text-white border-white/20">Cerrar Sesión</Button>
+                     <div className="flex items-center gap-4">
+                         <Button variant="secondary" onClick={() => { logout(); navigate('/'); }} className="!bg-white/5 !text-white border-white/10 hover:!bg-red-500/20 transition-all px-8">Logout</Button>
                      </div>
                  </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-6 -mt-16 relative z-20 mb-10">
-                <div className="bg-white p-2 rounded-2xl shadow-xl flex gap-2 overflow-x-auto no-scrollbar border border-gray-100">
+            <div className="max-w-7xl mx-auto px-6 -mt-20 relative z-20 mb-12">
+                <div className="bg-white/80 backdrop-blur-xl p-2 rounded-[2.5rem] shadow-2xl flex gap-2 overflow-x-auto no-scrollbar border border-white/50">
                     {[
-                        { id: 'dashboard', label: 'Resumen', icon: '📊' },
-                        { id: 'inventory', label: 'Stock', icon: '🥦' },
+                        { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+                        { id: 'inventory', label: 'Inventario / Stock', icon: '📦' },
                         { id: 'history', label: 'Ventas', icon: '📜' },
-                        { id: 'sensors', label: 'IoT & Alertas', icon: '🌡️' },
+                        { id: 'sensors', label: 'Sensores IoT', icon: '🌡️' },
                     ].map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setCurrentTab(tab.id as TabView)}
-                            className={`flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
-                                currentTab === tab.id ? 'bg-dark text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'
+                            className={`flex items-center gap-3 px-10 py-5 rounded-[2rem] font-black text-sm transition-all whitespace-nowrap ${
+                                currentTab === tab.id ? 'bg-dark text-white shadow-2xl scale-105' : 'text-gray-400 hover:bg-white/50'
                             }`}
                         >
                             <span>{tab.icon}</span> <span>{tab.label}</span>
@@ -143,118 +112,143 @@ export const AdminDashboard: React.FC = () => {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-6 pb-20">
+            <div className="max-w-7xl mx-auto px-6 pb-24">
                 {currentTab === 'dashboard' && (
-                    <div className="animate-fade-in space-y-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <StatCard title="Ganancia" value={`$${stats.income.toFixed(2)}`} sub="Total acumulado" icon="💰" colorClass="from-yellow-400 to-orange-500" />
-                            <StatCard title="Pedidos" value={stats.units} sub="Unidades vendidas" icon="📦" colorClass="from-blue-400 to-indigo-500" />
-                            <StatCard title="Top Venta" value={stats.topProduct.name} sub="El favorito" icon="⭐" colorClass="from-orange-400 to-red-500" />
-                            <StatCard title="Box Status" value={boxStatus.isOccupied ? 'Ocupado' : 'Libre'} sub="Estado actual" icon="🏢" colorClass="from-teal-400 to-emerald-500" />
-                        </div>
+                    <div className="animate-fade-in grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                        <StatCard title="Ingresos" value={`$${stats.income.toFixed(2)}`} sub="Total ventas brutas" icon="💰" colorClass="from-green-400 to-emerald-600" />
+                        <StatCard title="Vendidos" value={stats.units} sub="Unidades totales" icon="📦" colorClass="from-blue-400 to-indigo-600" />
+                        <StatCard title="Box" value={boxStatus.isOccupied ? 'OCUPADO' : 'LIBRE'} sub="Estado actual" icon="🏢" colorClass="from-teal-400 to-cyan-600" />
+                        <StatCard title="Alertas" value={tempAlerts.length} sub="Incidencias activas" icon="🚨" colorClass="from-red-400 to-orange-600" />
                     </div>
                 )}
 
                 {currentTab === 'inventory' && (
-                    <div className="animate-fade-in space-y-8">
-                        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                            <div className="flex flex-col">
-                                <h3 className="font-black text-dark text-xl uppercase tracking-tighter italic">Gestión de Inventario</h3>
-                                <p className="text-xs text-gray-400 font-medium">Controla la disponibilidad en tiempo real de {PRODUCTS.length} platos.</p>
+                    <div className="animate-fade-in bg-white rounded-[3rem] shadow-xl border border-gray-100 overflow-hidden">
+                        <div className="p-10 border-b border-gray-50 flex flex-col md:flex-row justify-between items-center gap-6">
+                            <div>
+                                <h3 className="text-2xl font-black text-dark tracking-tight">Maestro de Inventario</h3>
+                                <p className="text-gray-400 text-sm font-medium">Gestiona la disponibilidad de tus productos por nombre.</p>
                             </div>
-                            <div className="flex gap-2">
-                                <Badge type="hot" />
-                                <Badge type="cold" />
+                            <div className="bg-gray-50 px-6 py-3 rounded-2xl flex items-center gap-4 border border-gray-100">
+                                <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Filtrar por nombre:</span>
+                                <input 
+                                    type="text" 
+                                    placeholder="Buscar..." 
+                                    className="bg-transparent border-none outline-none font-bold text-dark w-40"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
                             </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {PRODUCTS.map(prod => {
-                                const isAvailable = inventory[prod.id.toString()] !== false;
-                                return (
-                                    <Card key={prod.id} className="relative group transition-all duration-500">
-                                        <div className={`relative h-40 overflow-hidden ${!isAvailable ? 'grayscale opacity-40' : ''}`}>
-                                            <img src={prod.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                                            {prod.onSale && (
-                                                <div className="absolute top-3 right-3 bg-amber-400 text-amber-950 font-black px-2 py-0.5 rounded text-[8px]">OFERTA</div>
-                                            )}
-                                            <div className="absolute top-3 left-3">
-                                                <Badge type={prod.type} className="shadow-lg backdrop-blur-md bg-white/90" />
-                                            </div>
-                                            {!isAvailable && (
-                                                <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center">
-                                                    <span className="bg-red-500 text-white font-black px-3 py-1 rounded-lg text-[10px] uppercase tracking-widest shadow-xl">Agotado</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="p-5">
-                                            <h4 className="font-bold text-dark text-sm truncate mb-4">{prod.name}</h4>
-                                            <Button 
-                                                variant={isAvailable ? 'primary' : 'outline'} 
-                                                fullWidth 
-                                                onClick={() => toggleProduct(prod.id, !isAvailable)}
-                                                className="!py-2.5 !text-[10px] uppercase tracking-widest"
-                                            >
-                                                {isAvailable ? 'En Stock ✓' : 'Habilitar'}
-                                            </Button>
-                                        </div>
-                                    </Card>
-                                );
-                            })}
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-gray-50/50">
+                                    <tr>
+                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Producto</th>
+                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Categoría</th>
+                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Precio</th>
+                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Estado</th>
+                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {PRODUCTS.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(prod => {
+                                        const isAvailable = inventory[prod.id.toString()] !== false;
+                                        return (
+                                            <tr key={prod.id} className="hover:bg-gray-50/50 transition-colors group">
+                                                <td className="px-10 py-6">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center font-black text-gray-400">{prod.id}</div>
+                                                        <span className="font-bold text-dark text-lg group-hover:text-primary transition-colors">{prod.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-10 py-6">
+                                                    <Badge type={prod.type} />
+                                                </td>
+                                                <td className="px-10 py-6">
+                                                    <span className="font-black text-dark tracking-tighter text-lg">${prod.price.toFixed(2)}</span>
+                                                </td>
+                                                <td className="px-10 py-6">
+                                                    <div className={`flex items-center gap-2 px-3 py-1 rounded-lg w-fit ${isAvailable ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                                        <div className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
+                                                        <span className="text-[10px] font-black uppercase">{isAvailable ? 'En Stock' : 'Agotado'}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-10 py-6 text-right">
+                                                    <button 
+                                                        onClick={() => toggleProduct(prod.id, !isAvailable)}
+                                                        className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
+                                                            isAvailable ? 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white' : 'bg-dark text-white hover:bg-primary shadow-xl'
+                                                        }`}
+                                                    >
+                                                        {isAvailable ? 'Marcar Agotado' : 'Habilitar'}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 )}
 
                 {currentTab === 'sensors' && (
                     <div className="animate-fade-in space-y-10">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <Card className={`p-12 text-center border-b-8 transition-all duration-500 ${
-                                realTemps.hot < 60 || realTemps.hot > 85 ? 'border-red-600 ring-4 ring-red-500/20 bg-red-50 animate-pulse' : 'border-red-500'
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            <Card className={`p-16 text-center border-b-8 transition-all duration-700 !rounded-[3.5rem] ${
+                                realTemps.hot < 60 ? 'border-red-600 bg-red-50/30' : 'border-orange-500'
                             }`}>
-                                <div className="text-6xl mb-4">🔥</div>
-                                <p className="text-gray-400 font-bold uppercase text-xs mb-2">Sensor Caliente</p>
-                                <div className={`text-8xl font-black ${realTemps.hot < 60 || realTemps.hot > 85 ? 'text-red-700' : 'text-red-600'}`}>
+                                <div className="text-7xl mb-6">🔥</div>
+                                <p className="text-gray-400 font-black uppercase text-xs tracking-[0.2em] mb-4">Módulo Caliente</p>
+                                <div className={`text-9xl font-black ${realTemps.hot < 60 ? 'text-red-700' : 'text-dark'}`}>
                                     {realTemps.hot}°C
                                 </div>
-                                <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-40">Óptimo: 60°C - 80°C</p>
+                                <div className="mt-8 flex justify-center">
+                                     <span className="px-6 py-2 rounded-full bg-white shadow-sm border border-gray-100 text-[10px] font-black uppercase text-gray-400">Objetivo: 65°C</span>
+                                </div>
                             </Card>
 
-                            <Card className={`p-12 text-center border-b-8 transition-all duration-500 ${
-                                realTemps.cold > 8 || realTemps.cold < -2 ? 'border-red-600 ring-4 ring-red-500/20 bg-red-50 animate-pulse' : 'border-teal-500'
+                            <Card className={`p-16 text-center border-b-8 transition-all duration-700 !rounded-[3.5rem] ${
+                                realTemps.cold > 8 ? 'border-red-600 bg-red-50/30' : 'border-teal-500'
                             }`}>
-                                <div className="text-6xl mb-4">❄️</div>
-                                <p className="text-gray-400 font-bold uppercase text-xs mb-2">Sensor Frío</p>
-                                <div className={`text-8xl font-black ${realTemps.cold > 8 || realTemps.cold < -2 ? 'text-red-700' : 'text-teal-600'}`}>
+                                <div className="text-7xl mb-6">❄️</div>
+                                <p className="text-gray-400 font-black uppercase text-xs tracking-[0.2em] mb-4">Módulo Frío</p>
+                                <div className={`text-9xl font-black ${realTemps.cold > 8 ? 'text-red-700' : 'text-dark'}`}>
                                     {realTemps.cold}°C
                                 </div>
-                                <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-40">Óptimo: 0°C - 7°C</p>
+                                <div className="mt-8 flex justify-center">
+                                     <span className="px-6 py-2 rounded-full bg-white shadow-sm border border-gray-100 text-[10px] font-black uppercase text-gray-400">Objetivo: 4°C</span>
+                                </div>
                             </Card>
                         </div>
 
-                        <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-gray-100">
-                            <div className="flex items-center justify-between mb-10">
-                                <div className="flex flex-col">
-                                    <h3 className="font-black text-dark text-xl uppercase tracking-tighter italic">Simulador IoT</h3>
-                                    <p className="text-xs text-gray-400 font-medium">Prueba el sistema de notificaciones críticas</p>
+                        <div className="bg-white rounded-[3.5rem] p-12 shadow-2xl border border-gray-100 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-10 opacity-[0.03] text-9xl font-black italic">IOT</div>
+                            <div className="flex items-center justify-between mb-12 relative z-10">
+                                <div>
+                                    <h3 className="text-2xl font-black text-dark tracking-tighter italic uppercase">Simulador de Emergencia</h3>
+                                    <p className="text-gray-400 font-medium text-sm">Ajusta los sensores para disparar protocolos de seguridad.</p>
                                 </div>
-                                <button onClick={() => setIsSimMode(!isSimMode)} className={`w-16 h-8 rounded-full transition-all flex items-center px-1 ${isSimMode ? 'bg-primary' : 'bg-gray-200'}`}>
-                                    <div className={`w-6 h-6 bg-white rounded-full transition-all ${isSimMode ? 'translate-x-8' : ''}`}></div>
+                                <button onClick={() => setIsSimMode(!isSimMode)} className={`w-20 h-10 rounded-full transition-all flex items-center px-1.5 ${isSimMode ? 'bg-primary shadow-xl shadow-orange-500/40' : 'bg-gray-200'}`}>
+                                    <div className={`w-7 h-7 bg-white rounded-full shadow-md transition-all ${isSimMode ? 'translate-x-10' : ''}`}></div>
                                 </button>
                             </div>
                             {isSimMode && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-16 animate-slide-up">
-                                    <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-20 animate-slide-up relative z-10">
+                                    <div className="space-y-6">
                                         <div className="flex justify-between items-end">
-                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Calor</p>
-                                            <span className="text-xl font-bold text-red-600">{realTemps.hot}°C</span>
+                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Simular Calor</p>
+                                            <span className="text-2xl font-black text-orange-600">{realTemps.hot}°C</span>
                                         </div>
-                                        <input type="range" min="30" max="100" value={realTemps.hot} onChange={(e) => handleTempChange('hot', parseInt(e.target.value))} className="w-full h-2 bg-red-100 rounded-lg appearance-none cursor-pointer accent-red-600" />
+                                        <input type="range" min="30" max="95" value={realTemps.hot} onChange={(e) => handleTempChange('hot', parseInt(e.target.value))} className="w-full h-3 bg-orange-100 rounded-full appearance-none cursor-pointer accent-orange-600" />
                                     </div>
-                                    <div className="space-y-4">
+                                    <div className="space-y-6">
                                         <div className="flex justify-between items-end">
-                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Frío</p>
-                                            <span className="text-xl font-bold text-teal-600">{realTemps.cold}°C</span>
+                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Simular Frío</p>
+                                            <span className="text-2xl font-black text-teal-600">{realTemps.cold}°C</span>
                                         </div>
-                                        <input type="range" min="-15" max="25" value={realTemps.cold} onChange={(e) => handleTempChange('cold', parseInt(e.target.value))} className="w-full h-2 bg-teal-100 rounded-lg appearance-none cursor-pointer accent-teal-600" />
+                                        <input type="range" min="-10" max="25" value={realTemps.cold} onChange={(e) => handleTempChange('cold', parseInt(e.target.value))} className="w-full h-3 bg-teal-100 rounded-full appearance-none cursor-pointer accent-teal-600" />
                                     </div>
                                 </div>
                             )}
