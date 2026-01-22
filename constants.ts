@@ -70,13 +70,6 @@ export const PRODUCTS: Product[] = [
     price: 11.00,
     type: 'hot',
     image: "https://images.unsplash.com/photo-1619895092538-128341789043?q=80&w=800&auto=format&fit=crop"
-  },
-  {
-    id: 10,
-    name: "Poke Bowl Salmón",
-    price: 13.00,
-    type: 'cold',
-    image: "https://images.unsplash.com/photo-1546069901-e579a6ad3358?q=80&w=800&auto=format&fit=crop"
   }
 ];
 

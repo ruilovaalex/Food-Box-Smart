@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
 import { useMqtt } from '../context/MqttContext';
 import { useAuth } from '../context/AuthContext';
@@ -31,6 +31,16 @@ export const Cart: React.FC = () => {
       cardExpiry?: string,
       cardCvv?: string
     }>({});
+
+  // Limpiar errores cuando el usuario interactúa
+  useEffect(() => {
+    setFormErrors({});
+  }, [name, phone, paymentMethod, cardNumber, cardExpiry, cardCvv]);
+
+  // Limpiar errores al salir
+  useEffect(() => {
+    return () => setFormErrors({});
+  }, []);
 
   if (items.length === 0) {
     return (

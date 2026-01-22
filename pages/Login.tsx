@@ -18,6 +18,16 @@ export const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Limpiar error cuando el usuario interactúa o cambia de modo
+  useEffect(() => {
+    setError('');
+  }, [email, password, name, isAdminMode, isRegistering]);
+
+  // Limpiar error al salir de la página
+  useEffect(() => {
+    return () => setError('');
+  }, []);
+
   // Rutas de archivos
   const logoUrl = '/images/logo.png';
   const gifUrl = '/images/calavera.gif';
