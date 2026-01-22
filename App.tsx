@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { MqttProvider } from './context/MqttContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { Login } from './pages/Login';
 import { Menu } from './pages/Menu';
 import { Cart } from './pages/Cart';
@@ -47,13 +49,15 @@ const AppRoutes = () => {
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <CartProvider>
-        <MqttProvider>
-          <Router>
-             <AppRoutes />
-          </Router>
-        </MqttProvider>
-      </CartProvider>
+      <NotificationProvider>
+        <CartProvider>
+          <MqttProvider>
+            <Router>
+               <AppRoutes />
+            </Router>
+          </MqttProvider>
+        </CartProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 };

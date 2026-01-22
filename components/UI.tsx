@@ -8,8 +8,27 @@ export const PageLayout: React.FC<{ children: React.ReactNode, className?: strin
   </div>
 );
 
+// --- Alert Banner ---
+export const Alert: React.FC<{ message: string; type?: 'warning' | 'critical'; onClose?: () => void }> = ({ message, type = 'warning', onClose }) => {
+  const isCritical = type === 'critical';
+  return (
+    <div className={`w-full p-4 rounded-2xl flex items-center justify-between animate-slide-up mb-4 border-2 ${
+      isCritical ? 'bg-red-50 border-red-200 text-red-700' : 'bg-orange-50 border-orange-200 text-orange-700'
+    }`}>
+      <div className="flex items-center gap-3">
+        <span className="text-xl">{isCritical ? '🚨' : '⚠️'}</span>
+        <span className="font-bold text-sm uppercase tracking-tight">{message}</span>
+      </div>
+      {onClose && (
+        <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-lg transition-colors">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      )}
+    </div>
+  );
+};
+
 // --- Badge ---
-// Fixed: Added children to props and updated rendering logic to prefer children if provided.
 export const Badge: React.FC<{ children?: React.ReactNode, type: 'hot' | 'cold' | string, className?: string }> = ({ children, type, className = '' }) => {
   const isHot = type === 'hot';
   const isCold = type === 'cold';
@@ -108,9 +127,10 @@ export const Input: React.FC<InputProps> = ({ label, error, className = '', icon
 );
 
 // --- Card ---
-export const Card: React.FC<{ children: React.ReactNode, className?: string, onClick?: () => void }> = ({ children, className = '', onClick }) => (
+export const Card: React.FC<{ children: React.ReactNode, className?: string, onClick?: () => void, style?: React.CSSProperties }> = ({ children, className = '', onClick, style }) => (
   <div 
     onClick={onClick}
+    style={style}
     className={`bg-white rounded-3xl shadow-sm border border-gray-100/50 overflow-hidden ${onClick ? 'cursor-pointer hover:shadow-xl hover:shadow-gray-200/50 hover:-translate-y-1 transition-all duration-300' : ''} ${className}`}
   >
     {children}

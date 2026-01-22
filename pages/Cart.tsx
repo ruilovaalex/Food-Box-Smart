@@ -10,19 +10,16 @@ import { Order } from '../types';
 export const Cart: React.FC = () => {
   const { items, total, decreaseQuantity, addToCart, removeFromCart, clearCart } = useCart();
   const { createOrder } = useMqtt();
-  const { user, logout } = useAuth(); // Agregamos logout aquí
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Detectar si es invitado
   const isGuest = user?.id.startsWith('guest-');
 
-  // Form States
   const [name, setName] = useState(user?.name && !isGuest ? user.name : '');
   const [phone, setPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
   
-  // Card States
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvv, setCardCvv] = useState('');
@@ -35,28 +32,21 @@ export const Cart: React.FC = () => {
       cardCvv?: string
     }>({});
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>, type: string) => {
-    const target = e.currentTarget;
-    target.onerror = null;
-    if (type === 'hot') {
-        target.src = "https://cdn-icons-png.flaticon.com/512/3075/3075977.png";
-    } else {
-        target.src = "https://cdn-icons-png.flaticon.com/512/938/938063.png";
-    }
-  };
-
   if (items.length === 0) {
     return (
       <PageLayout className="bg-white">
         <Navbar title="Carrito" onBack={() => navigate('/')} />
-        <div className="flex flex-col items-center justify-center h-[70vh] p-8 text-center animate-fade-in">
-          <div className="w-32 h-32 bg-orange-50 rounded-full flex items-center justify-center mb-6">
-             <span className="text-6xl">🛒</span>
+        <div className="flex flex-col items-center justify-center h-[80vh] p-8 text-center animate-fade-in">
+          <div className="relative mb-8">
+            <div className="w-32 h-32 bg-orange-50 rounded-full flex items-center justify-center animate-bounce-soft">
+               <span className="text-7xl">🛒</span>
+            </div>
+            <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-2xl">❓</div>
           </div>
-          <h2 className="text-2xl font-bold text-dark mb-2">Tu carrito está vacío</h2>
-          <p className="text-gray-500 mb-8 max-w-xs">¡No dejes que tu estómago espere! Agrega algo delicioso del menú.</p>
-          <Button onClick={() => navigate('/menu')} className="px-8 shadow-xl shadow-orange-500/20">
-            Explorar Menú
+          <h2 className="text-3xl font-black text-dark mb-3">¿Hambre acumulada?</h2>
+          <p className="text-gray-400 mb-10 max-w-xs font-medium">Tu carrito está esperando ser llenado con lo mejor de Food Box.</p>
+          <Button onClick={() => navigate('/menu')} className="px-12 py-5 text-lg shadow-2xl shadow-orange-500/40">
+            Explorar el Menú
           </Button>
         </div>
       </PageLayout>
@@ -65,13 +55,13 @@ export const Cart: React.FC = () => {
 
   const validateForm = () => {
       const errors: typeof formErrors = {};
-      if(!name.trim()) errors.name = "El nombre es obligatorio.";
-      if(!phone.trim() || phone.length < 7) errors.phone = "Ingresa un teléfono válido.";
+      if(!name.trim()) errors.name = "Nombre requerido";
+      if(!phone.trim() || phone.length < 7) errors.phone = "Teléfono inválido";
       
       if (paymentMethod === 'card') {
-          if (!cardNumber || cardNumber.replace(/\s/g, '').length < 16) errors.cardNumber = "Número de tarjeta incompleto.";
-          if (!cardExpiry) errors.cardExpiry = "Requerido.";
-          if (!cardCvv || cardCvv.length < 3) errors.cardCvv = "Inválido.";
+          if (!cardNumber || cardNumber.replace(/\s/g, '').length < 16) errors.cardNumber = "Tarjeta incompleta";
+          if (!cardExpiry) errors.cardExpiry = "Requerido";
+          if (!cardCvv || cardCvv.length < 3) errors.cardCvv = "CVV inválido";
       }
 
       setFormErrors(errors);
@@ -80,224 +70,200 @@ export const Cart: React.FC = () => {
 
   const handleCheckout = () => {
     if (!validateForm()) return;
-
     setIsProcessing(true);
-    // Simulación de procesamiento
     setTimeout(() => {
-        // CÓDIGO FIJO SOLICITADO: 1234
         const orderCode = "1234";
-        
-        // Generar un ID corto y legible (Ej: ORD-48291)
         const shortId = `ORD-${Math.floor(10000 + Math.random() * 90000)}`;
-        
         const newOrder: Order = {
             id: shortId,
             userId: user?.id || 'guest',
-            userEmail: user?.email || 'Invitado', // Guardamos el email real
+            userEmail: user?.email || 'Invitado',
             items: [...items],
             total: total,
             status: 'pending',
             code: orderCode,
             createdAt: Date.now(),
-            customerDetails: {
-                name, // Este es el nombre que se mostrará
-                phone,
-                paymentMethod
-            }
+            customerDetails: { name, phone, paymentMethod }
         };
-
         createOrder(newOrder);
         clearCart();
         setIsProcessing(false);
         navigate(`/order/${newOrder.id}`);
-    }, 500);
-  };
-
-  // Helper para formatear tarjeta
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      let val = e.target.value.replace(/\D/g, '');
-      val = val.substring(0, 16);
-      val = val.replace(/(\d{4})(?=\d)/g, '$1 ');
-      setCardNumber(val);
-  };
-
-  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value.replace(/\D/g, '');
-    if (val.length >= 2) {
-        val = val.substring(0, 2) + '/' + val.substring(2, 4);
-    }
-    setCardExpiry(val);
+    }, 800);
   };
 
   return (
-    <PageLayout className="pb-32">
-      <Navbar title="Mi Pedido" onBack={() => navigate('/menu')} 
+    <PageLayout className="pb-40 bg-[#F8F9FD]">
+      <Navbar title="Finalizar Pedido" onBack={() => navigate('/menu')} 
         rightAction={
-            <button onClick={clearCart} className="text-xs font-semibold text-red-500 hover:text-red-600 bg-red-50 px-2 py-1 rounded-lg">
-                Vaciar
+            <button onClick={clearCart} className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-50 px-3 py-1.5 rounded-full hover:bg-red-100 transition-colors">
+                Limpiar
             </button>
         }
       />
       
-      <div className="max-w-2xl mx-auto p-4 space-y-6">
+      <div className="max-w-2xl mx-auto p-6 space-y-8">
         
-        {/* Products List */}
-        <div className="space-y-3">
-            <h3 className="font-bold text-dark text-sm uppercase tracking-wide ml-1">Productos</h3>
-            {items.map((item, index) => (
-            <div 
-                key={item.id} 
-                className="bg-white p-3 rounded-2xl flex items-center gap-4 shadow-sm border border-gray-50 animate-slide-up"
-                style={{ animationDelay: `${index * 50}ms` }}
-            >
-                <img 
-                    src={item.image} 
-                    alt={item.name} 
-                    onError={(e) => handleImageError(e, item.type)}
-                    className="w-20 h-20 rounded-xl object-cover shadow-sm" 
-                />
-                <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-dark truncate">{item.name}</h4>
-                    <p className="text-sm text-gray-400 mb-2 font-medium">{item.type === 'hot' ? '🔥 Caliente' : '❄️ Frío'}</p>
-                    <div className="flex items-center justify-between">
-                        <p className="text-primary font-bold text-lg">${(item.price * item.quantity).toFixed(2)}</p>
-                    </div>
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                    <QuantityControl 
-                        small
-                        qty={item.quantity}
-                        onInc={() => addToCart(item)}
-                        onDec={() => decreaseQuantity(item.id)}
-                    />
-                </div>
+        {/* Lista de Productos con Animación */}
+        <section className="space-y-4">
+            <div className="flex items-center justify-between px-2">
+                <h3 className="font-black text-dark text-xs uppercase tracking-[0.2em]">Tus Elecciones</h3>
+                <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md">{items.length} productos</span>
             </div>
-            ))}
-        </div>
+            <div className="space-y-3">
+                {items.map((item, index) => (
+                    <div 
+                        key={item.id} 
+                        className="bg-white p-4 rounded-[2rem] flex items-center gap-4 shadow-[0_8px_20px_-6px_rgba(0,0,0,0.05)] border border-white group animate-slide-up"
+                        style={{ animationDelay: `${index * 80}ms` }}
+                    >
+                        <div className="relative overflow-hidden w-20 h-20 rounded-2xl shadow-inner bg-gray-50 flex-shrink-0">
+                            <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[10px]">{item.type === 'hot' ? '🔥' : '❄️'}</span>
+                                <h4 className="font-black text-dark truncate text-sm uppercase tracking-tight">{item.name}</h4>
+                            </div>
+                            <p className="text-primary font-black text-lg">${(item.price * item.quantity).toFixed(2)}</p>
+                        </div>
+                        <QuantityControl 
+                            small
+                            qty={item.quantity}
+                            onInc={() => addToCart(item)}
+                            onDec={() => decreaseQuantity(item.id)}
+                        />
+                    </div>
+                ))}
+            </div>
+        </section>
 
-        {/* Checkout Form - Solo visible si NO es invitado */}
+        {/* Datos del Cliente */}
         {!isGuest ? (
-            <div className="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
-                <h3 className="font-bold text-dark text-lg mb-4 flex items-center gap-2">
-                    <span>📝</span> Datos de Pago
+            <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-6">
+                <h3 className="font-black text-dark text-lg flex items-center gap-3">
+                    <span className="w-8 h-8 bg-orange-100 text-primary rounded-xl flex items-center justify-center text-sm">👤</span>
+                    Datos de Entrega
                 </h3>
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Input 
-                        label="Nombre Completo"
-                        placeholder="Ej. Juan Pérez"
-                        name="name"
-                        autoComplete="name"
+                        label="¿Quién retira?"
+                        placeholder="Nombre completo"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         error={formErrors.name}
+                        icon="👤"
                     />
                     <Input 
-                        label="Número de Teléfono"
+                        label="Teléfono de contacto"
                         type="tel"
-                        placeholder="099..."
-                        name="phone"
-                        autoComplete="tel"
+                        placeholder="099-999-9999"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         error={formErrors.phone}
+                        icon="📱"
                     />
-                    
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2 ml-1">Método de Pago</label>
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                            <button 
-                                className={`p-3 rounded-2xl border font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                                    paymentMethod === 'cash' 
-                                    ? 'bg-green-50 border-green-500 text-green-700 shadow-sm' 
-                                    : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
-                                }`}
-                                onClick={() => setPaymentMethod('cash')}
-                            >
-                                <span>💵</span> Efectivo
-                            </button>
-                            <button 
-                                className={`p-3 rounded-2xl border font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                                    paymentMethod === 'card' 
-                                    ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm' 
-                                    : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
-                                }`}
-                                onClick={() => setPaymentMethod('card')}
-                            >
-                                <span>💳</span> Tarjeta
-                            </button>
-                        </div>
-
-                        {/* Card Input Fields - Conditional Rendering */}
-                        {paymentMethod === 'card' && (
-                            <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 space-y-4 animate-fade-in">
-                                <Input 
-                                    label="Número de Tarjeta"
-                                    placeholder="0000 0000 0000 0000"
-                                    value={cardNumber}
-                                    onChange={handleCardNumberChange}
-                                    error={formErrors.cardNumber}
-                                    maxLength={19}
-                                    icon={<span className="text-gray-400">💳</span>}
-                                />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Input 
-                                        label="Expiración"
-                                        placeholder="MM/YY"
-                                        value={cardExpiry}
-                                        onChange={handleExpiryChange}
-                                        error={formErrors.cardExpiry}
-                                        maxLength={5}
-                                    />
-                                    <Input 
-                                        label="CVV"
-                                        placeholder="123"
-                                        type="password"
-                                        maxLength={3}
-                                        value={cardCvv}
-                                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
-                                        error={formErrors.cardCvv}
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </div>
                 </div>
-            </div>
+                
+                <div className="pt-4">
+                    <label className="block text-[10px] font-black text-gray-400 uppercase mb-4 tracking-widest ml-1">Método de Pago</label>
+                    <div className="flex gap-3">
+                        {['cash', 'card'].map((method) => (
+                            <button 
+                                key={method}
+                                onClick={() => setPaymentMethod(method as any)}
+                                className={`flex-1 p-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-3 font-black text-xs uppercase tracking-widest ${
+                                    paymentMethod === method 
+                                    ? 'bg-dark text-white border-dark shadow-xl scale-[1.02]' 
+                                    : 'bg-gray-50 text-gray-400 border-transparent hover:bg-gray-100'
+                                }`}
+                            >
+                                {method === 'cash' ? '💵 Efectivo' : '💳 Tarjeta'}
+                            </button>
+                        ))}
+                    </div>
+
+                    {paymentMethod === 'card' && (
+                        <div className="mt-6 p-6 bg-slate-900 rounded-3xl space-y-4 animate-slide-up shadow-2xl">
+                            <Input 
+                                label="Número de Tarjeta"
+                                placeholder="0000 0000 0000 0000"
+                                value={cardNumber}
+                                onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ').substring(0, 19))}
+                                error={formErrors.cardNumber}
+                                className="!bg-white/10 !text-white !border-white/10 focus:!border-white/30"
+                            />
+                            <div className="grid grid-cols-2 gap-4">
+                                <Input 
+                                    label="Expiración"
+                                    placeholder="MM/YY"
+                                    value={cardExpiry}
+                                    onChange={(e) => {
+                                        let v = e.target.value.replace(/\D/g, '');
+                                        if (v.length >= 2) v = v.substring(0, 2) + '/' + v.substring(2, 4);
+                                        setCardExpiry(v);
+                                    }}
+                                    error={formErrors.cardExpiry}
+                                    className="!bg-white/10 !text-white !border-white/10"
+                                />
+                                <Input 
+                                    label="CVV"
+                                    type="password"
+                                    maxLength={3}
+                                    placeholder="***"
+                                    value={cardCvv}
+                                    onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
+                                    error={formErrors.cardCvv}
+                                    className="!bg-white/10 !text-white !border-white/10"
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </section>
         ) : (
-            <div className="bg-orange-50 p-6 rounded-3xl border border-orange-100 text-center">
-                <span className="text-4xl mb-2 block">🔒</span>
-                <h3 className="font-bold text-dark text-lg mb-2">Modo Visita</h3>
-                <p className="text-gray-600 text-sm mb-4">
-                    Estás navegando como invitado. Para confirmar tu pedido y pagar, necesitas crear una cuenta o iniciar sesión.
+            <div className="bg-orange-50 p-8 rounded-[2.5rem] border-2 border-dashed border-orange-200 text-center animate-pulse">
+                <span className="text-4xl mb-3 block">🔒</span>
+                <h3 className="font-black text-primary text-sm uppercase tracking-widest mb-2">Modo Invitado</h3>
+                <p className="text-orange-800/60 text-xs font-bold leading-relaxed">
+                    Debes iniciar sesión para completar la compra y recibir tu código de Food Box.
                 </p>
             </div>
         )}
 
-        {/* Receipt Style Summary */}
-        <div className="bg-white p-6 rounded-3xl shadow-xl shadow-gray-200/50 relative overflow-hidden">
-            {/* Decoration: jagged line top */}
-            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-orange-100 to-orange-50" />
-            
-            <h3 className="font-bold text-lg text-dark mb-6">Resumen de Pago</h3>
-            <div className="space-y-3 text-sm">
-                <div className="flex justify-between text-gray-500">
-                    <span>Subtotal</span>
-                    <span>${total.toFixed(2)}</span>
+        {/* Resumen Estilo Ticket */}
+        <section className="relative">
+            <div className="bg-white rounded-[2rem] shadow-xl overflow-hidden border border-gray-100">
+                <div className="bg-gray-50 px-8 py-4 border-b border-dashed border-gray-200 flex justify-between items-center">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Resumen Digital</span>
+                    <span className="text-[10px] font-mono text-gray-400">#{Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
                 </div>
-                <div className="flex justify-between text-gray-500">
-                    <span>Tarifa de servicio</span>
-                    <span>$0.00</span>
+                <div className="p-8 space-y-4">
+                    <div className="flex justify-between items-center">
+                        <span className="text-gray-400 font-bold text-sm">Subtotal</span>
+                        <span className="text-dark font-black font-mono">${total.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <span className="text-gray-400 font-bold text-sm">Servicio Smart</span>
+                        <span className="text-green-500 font-black font-mono">GRATIS</span>
+                    </div>
+                    <div className="pt-4 border-t-2 border-dashed border-gray-100 flex justify-between items-end">
+                        <span className="text-dark font-black text-lg uppercase tracking-tighter">Total a Pagar</span>
+                        <span className="text-4xl font-black text-primary font-mono tracking-tighter">${total.toFixed(2)}</span>
+                    </div>
                 </div>
-                <div className="my-4 border-t border-dashed border-gray-300"></div>
-                <div className="flex justify-between text-xl font-extrabold text-dark">
-                    <span>Total a Pagar</span>
-                    <span>${total.toFixed(2)}</span>
+                {/* Dientes de ticket inferior */}
+                <div className="flex justify-between px-2 pb-1">
+                    {Array.from({ length: 20 }).map((_, i) => (
+                        <div key={i} className="w-3 h-3 bg-[#F8F9FD] rounded-full -mb-1.5 shadow-inner"></div>
+                    ))}
                 </div>
             </div>
-        </div>
+        </section>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg p-5 border-t border-gray-100 z-40 rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+      {/* Botón Flotante de Acción */}
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#F8F9FD] via-[#F8F9FD] to-transparent z-40">
           <div className="max-w-2xl mx-auto">
             {!isGuest ? (
                 <Button 
@@ -305,21 +271,18 @@ export const Cart: React.FC = () => {
                     disabled={isProcessing} 
                     isLoading={isProcessing}
                     fullWidth 
-                    className="text-lg py-4 shadow-xl shadow-orange-500/20"
+                    className="py-5 text-lg shadow-[0_20px_50px_rgba(255,138,43,0.3)] hover:scale-[1.02] active:scale-95"
                 >
-                    {isProcessing ? 'Procesando...' : 'Confirmar Pedido'}
+                    {isProcessing ? 'PROCESANDO PAGO...' : 'CONFIRMAR Y PAGAR'}
                 </Button>
             ) : (
                 <Button 
-                    onClick={() => {
-                        logout(); // Cerramos la sesión de invitado
-                        navigate('/'); // Redirigimos al login
-                    }} 
+                    onClick={() => { logout(); navigate('/'); }} 
                     fullWidth 
                     variant="secondary"
-                    className="text-lg py-4 border-primary text-primary"
+                    className="py-5 border-2 border-primary text-primary hover:bg-orange-50"
                 >
-                    🔒 Inicia sesión para ordenar
+                    🔑 INICIAR SESIÓN PARA PAGAR
                 </Button>
             )}
           </div>

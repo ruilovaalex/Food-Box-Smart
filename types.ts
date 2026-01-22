@@ -5,9 +5,12 @@ export interface Product {
   id: number;
   name: string;
   price: number;
+  originalPrice?: number; // Para mostrar descuentos
   type: ProductType;
   image: string;
-  isAvailable?: boolean; // Campo opcional para disponibilidad
+  isAvailable?: boolean;
+  onSale?: boolean; // Indica si tiene oferta activa
+  saleText?: string; // Texto de la oferta (ej: "2x1", "15% OFF")
 }
 
 export interface CartItem extends Product {
@@ -41,4 +44,13 @@ export interface User {
   name: string;
   email: string;
   role: 'client' | 'admin';
+}
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  body: string;
+  type: 'info' | 'success' | 'warning' | 'critical' | 'offer';
+  timestamp: number;
+  read: boolean;
 }

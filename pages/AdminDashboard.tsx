@@ -1,8 +1,9 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useMqtt } from '../context/MqttContext';
 import { useAuth } from '../context/AuthContext';
-import { Card, Button, PageLayout, Badge, Input } from '../components/UI';
+import { useNotifications } from '../context/NotificationContext';
+import { Card, Button, PageLayout, Badge, Input, Alert } from '../components/UI';
 import { useNavigate } from 'react-router-dom';
 import { database } from '../services/database';
 import { PRODUCTS } from '../constants';
@@ -22,14 +23,45 @@ const StatCard: React.FC<{ title: string, value: string | number, sub: string, i
 );
 
 export const AdminDashboard: React.FC = () => {
-    const { orders, resetDatabase, realTemps, boxStatus, inventory, toggleProduct } = useMqtt();
+    const { orders, realTemps, boxStatus, inventory, toggleProduct } = useMqtt();
     const { logout } = useAuth();
+    const { addNotification } = useNotifications();
     const navigate = useNavigate();
     
     const [currentTab, setCurrentTab] = useState<TabView>('dashboard');
     const [searchTerm, setSearchTerm] = useState('');
-    const [isResetting, setIsResetting] = useState(false);
     const [isSimMode, setIsSimMode] = useState(false);
+    
+    // Referencias para evitar spam de notificaciones
+    const lastAlertTime = useRef({ hot: 0, cold: 0 });
+
+    const tempAlerts = useMemo(() => {
+        const alerts: { msg: string; type: 'warning' | 'critical' }[] = [];
+        const now = Date.now();
+        const COOLDOWN = 60000; // 1 minuto de cooldown entre notificaciones push del mismo sensor
+
+        if (realTemps.hot < 60) {
+            alerts.push({ msg: "Calor Insuficiente: Riesgo de bacterias", type: 'critical' });
+            if (now - lastAlertTime.current.hot > COOLDOWN) {
+                addNotification({ title: "🚨 ALERTA CALOR", body: "Temperatura del módulo caliente por debajo de 60°C", type: 'critical' });
+                lastAlertTime.current.hot = now;
+            }
+        } else if (realTemps.hot > 85) {
+            alerts.push({ msg: "Calor Excesivo: Riesgo de sobrecocción", type: 'warning' });
+        }
+
+        if (realTemps.cold > 8) {
+            alerts.push({ msg: "Pérdida de Frío: Riesgo de descomposición", type: 'critical' });
+            if (now - lastAlertTime.current.cold > COOLDOWN) {
+                addNotification({ title: "❄️ ALERTA FRÍO", body: "Módulo frío ha superado los 8°C. ¡Acción requerida!", type: 'critical' });
+                lastAlertTime.current.cold = now;
+            }
+        } else if (realTemps.cold < -2) {
+            alerts.push({ msg: "Frío Extremo: Riesgo de congelación", type: 'warning' });
+        }
+        
+        return alerts;
+    }, [realTemps, addNotification]);
 
     const stats = useMemo(() => {
         const productCounts: { [id: number]: { name: string, count: number } } = {};
@@ -72,7 +104,6 @@ export const AdminDashboard: React.FC = () => {
 
     return (
         <PageLayout className="bg-[#F3F4F6]">
-            {/* Header */}
             <div className="bg-dark text-white rounded-b-[3rem] pt-10 pb-16 px-6 shadow-2xl relative overflow-hidden mb-10">
                  <div className="absolute top-0 right-0 w-96 h-96 bg-primary opacity-20 rounded-full blur-3xl"></div>
                  <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6 max-w-7xl mx-auto">
@@ -80,18 +111,24 @@ export const AdminDashboard: React.FC = () => {
                         <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 text-3xl">🛠️</div>
                         <div><h2 className="text-gray-400 font-bold text-xs uppercase tracking-widest mb-1">Administración</h2><h1 className="text-3xl font-black">Panel Food Box</h1></div>
                      </div>
-                     <Button variant="secondary" onClick={() => { logout(); navigate('/'); }} className="!bg-white/10 !text-white border-white/20">Cerrar Sesión</Button>
+                     <div className="flex items-center gap-3">
+                         {tempAlerts.length > 0 && (
+                             <div className="flex items-center gap-2 bg-red-500/20 px-4 py-2 rounded-xl animate-pulse">
+                                 <span className="text-sm font-black text-red-400">🚨 {tempAlerts.length} ALERTAS</span>
+                             </div>
+                         )}
+                         <Button variant="secondary" onClick={() => { logout(); navigate('/'); }} className="!bg-white/10 !text-white border-white/20">Cerrar Sesión</Button>
+                     </div>
                  </div>
             </div>
 
-            {/* Nav Tabs */}
             <div className="max-w-7xl mx-auto px-6 -mt-16 relative z-20 mb-10">
                 <div className="bg-white p-2 rounded-2xl shadow-xl flex gap-2 overflow-x-auto no-scrollbar border border-gray-100">
                     {[
                         { id: 'dashboard', label: 'Resumen', icon: '📊' },
                         { id: 'inventory', label: 'Stock', icon: '🥦' },
                         { id: 'history', label: 'Ventas', icon: '📜' },
-                        { id: 'sensors', label: 'IoT', icon: '🌡️' },
+                        { id: 'sensors', label: 'IoT & Alertas', icon: '🌡️' },
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -106,7 +143,6 @@ export const AdminDashboard: React.FC = () => {
                 </div>
             </div>
 
-            {/* Content Area */}
             <div className="max-w-7xl mx-auto px-6 pb-20">
                 {currentTab === 'dashboard' && (
                     <div className="animate-fade-in space-y-8">
@@ -120,43 +156,50 @@ export const AdminDashboard: React.FC = () => {
                 )}
 
                 {currentTab === 'inventory' && (
-                    <div className="animate-fade-in grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {PRODUCTS.map(prod => {
-                            const isAvailable = inventory[prod.id.toString()] !== false;
-                            return (
-                                <Card key={prod.id} className="p-6">
-                                    <div className="flex gap-4 mb-4">
-                                        <img src={prod.image} className={`w-20 h-20 rounded-2xl object-cover ${!isAvailable ? 'grayscale opacity-50' : ''}`} />
-                                        <div>
-                                            <h4 className="font-bold text-dark text-lg">{prod.name}</h4>
-                                            <Badge type={prod.type} className="scale-75 origin-left" />
+                    <div className="animate-fade-in space-y-8">
+                        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div className="flex flex-col">
+                                <h3 className="font-black text-dark text-xl uppercase tracking-tighter italic">Gestión de Inventario</h3>
+                                <p className="text-xs text-gray-400 font-medium">Controla la disponibilidad en tiempo real de {PRODUCTS.length} platos.</p>
+                            </div>
+                            <div className="flex gap-2">
+                                <Badge type="hot" />
+                                <Badge type="cold" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {PRODUCTS.map(prod => {
+                                const isAvailable = inventory[prod.id.toString()] !== false;
+                                return (
+                                    <Card key={prod.id} className="relative group transition-all duration-500">
+                                        <div className={`relative h-40 overflow-hidden ${!isAvailable ? 'grayscale opacity-40' : ''}`}>
+                                            <img src={prod.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                            {prod.onSale && (
+                                                <div className="absolute top-3 right-3 bg-amber-400 text-amber-950 font-black px-2 py-0.5 rounded text-[8px]">OFERTA</div>
+                                            )}
+                                            <div className="absolute top-3 left-3">
+                                                <Badge type={prod.type} className="shadow-lg backdrop-blur-md bg-white/90" />
+                                            </div>
+                                            {!isAvailable && (
+                                                <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center">
+                                                    <span className="bg-red-500 text-white font-black px-3 py-1 rounded-lg text-[10px] uppercase tracking-widest shadow-xl">Agotado</span>
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
-                                    <Button variant={isAvailable ? 'primary' : 'outline'} fullWidth onClick={() => toggleProduct(prod.id, !isAvailable)}>
-                                        {isAvailable ? 'En Stock ✓' : 'Marcar disponible'}
-                                    </Button>
-                                </Card>
-                            );
-                        })}
-                    </div>
-                )}
-
-                {currentTab === 'history' && (
-                    <div className="animate-fade-in space-y-6">
-                        <Input placeholder="🔍 Buscar por nombre o ID..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} icon="🔎" />
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {filteredOrders.map(order => (
-                                <Card key={order.id} className="p-5 border-l-4 border-primary">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <p className="text-sm font-black text-dark">{order.customerDetails?.name || 'Cliente'}</p>
-                                        <Badge type={order.status === 'delivered' ? 'Entregado' : 'Listo'} className="scale-75" />
-                                    </div>
-                                    <div className="flex justify-between items-center text-xs text-gray-400">
-                                        <span>#{order.id}</span>
-                                        <span className="font-bold text-primary">${order.total.toFixed(2)}</span>
-                                    </div>
-                                </Card>
-                            ))}
+                                        <div className="p-5">
+                                            <h4 className="font-bold text-dark text-sm truncate mb-4">{prod.name}</h4>
+                                            <Button 
+                                                variant={isAvailable ? 'primary' : 'outline'} 
+                                                fullWidth 
+                                                onClick={() => toggleProduct(prod.id, !isAvailable)}
+                                                className="!py-2.5 !text-[10px] uppercase tracking-widest"
+                                            >
+                                                {isAvailable ? 'En Stock ✓' : 'Habilitar'}
+                                            </Button>
+                                        </div>
+                                    </Card>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
@@ -164,29 +207,55 @@ export const AdminDashboard: React.FC = () => {
                 {currentTab === 'sensors' && (
                     <div className="animate-fade-in space-y-10">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <Card className="p-12 text-center border-b-8 border-red-500 shadow-xl">
+                            <Card className={`p-12 text-center border-b-8 transition-all duration-500 ${
+                                realTemps.hot < 60 || realTemps.hot > 85 ? 'border-red-600 ring-4 ring-red-500/20 bg-red-50 animate-pulse' : 'border-red-500'
+                            }`}>
                                 <div className="text-6xl mb-4">🔥</div>
                                 <p className="text-gray-400 font-bold uppercase text-xs mb-2">Sensor Caliente</p>
-                                <div className="text-8xl font-black text-red-600">{realTemps.hot}°C</div>
+                                <div className={`text-8xl font-black ${realTemps.hot < 60 || realTemps.hot > 85 ? 'text-red-700' : 'text-red-600'}`}>
+                                    {realTemps.hot}°C
+                                </div>
+                                <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-40">Óptimo: 60°C - 80°C</p>
                             </Card>
-                            <Card className="p-12 text-center border-b-8 border-teal-500 shadow-xl">
+
+                            <Card className={`p-12 text-center border-b-8 transition-all duration-500 ${
+                                realTemps.cold > 8 || realTemps.cold < -2 ? 'border-red-600 ring-4 ring-red-500/20 bg-red-50 animate-pulse' : 'border-teal-500'
+                            }`}>
                                 <div className="text-6xl mb-4">❄️</div>
                                 <p className="text-gray-400 font-bold uppercase text-xs mb-2">Sensor Frío</p>
-                                <div className="text-8xl font-black text-teal-600">{realTemps.cold}°C</div>
+                                <div className={`text-8xl font-black ${realTemps.cold > 8 || realTemps.cold < -2 ? 'text-red-700' : 'text-teal-600'}`}>
+                                    {realTemps.cold}°C
+                                </div>
+                                <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-40">Óptimo: 0°C - 7°C</p>
                             </Card>
                         </div>
 
                         <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-gray-100">
                             <div className="flex items-center justify-between mb-10">
-                                <h3 className="font-black text-dark text-xl uppercase tracking-tighter italic">Simulador de Sensores</h3>
+                                <div className="flex flex-col">
+                                    <h3 className="font-black text-dark text-xl uppercase tracking-tighter italic">Simulador IoT</h3>
+                                    <p className="text-xs text-gray-400 font-medium">Prueba el sistema de notificaciones críticas</p>
+                                </div>
                                 <button onClick={() => setIsSimMode(!isSimMode)} className={`w-16 h-8 rounded-full transition-all flex items-center px-1 ${isSimMode ? 'bg-primary' : 'bg-gray-200'}`}>
                                     <div className={`w-6 h-6 bg-white rounded-full transition-all ${isSimMode ? 'translate-x-8' : ''}`}></div>
                                 </button>
                             </div>
                             {isSimMode && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-16 animate-slide-up">
-                                    <div><p className="text-xs font-bold text-gray-400 mb-4">Ajustar Calor (°C)</p><input type="range" min="40" max="90" value={realTemps.hot} onChange={(e) => handleTempChange('hot', parseInt(e.target.value))} className="w-full h-2 bg-red-100 rounded-lg appearance-none cursor-pointer accent-red-600" /></div>
-                                    <div><p className="text-xs font-bold text-gray-400 mb-4">Ajustar Frío (°C)</p><input type="range" min="-10" max="15" value={realTemps.cold} onChange={(e) => handleTempChange('cold', parseInt(e.target.value))} className="w-full h-2 bg-teal-100 rounded-lg appearance-none cursor-pointer accent-teal-600" /></div>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-end">
+                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Calor</p>
+                                            <span className="text-xl font-bold text-red-600">{realTemps.hot}°C</span>
+                                        </div>
+                                        <input type="range" min="30" max="100" value={realTemps.hot} onChange={(e) => handleTempChange('hot', parseInt(e.target.value))} className="w-full h-2 bg-red-100 rounded-lg appearance-none cursor-pointer accent-red-600" />
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-end">
+                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Frío</p>
+                                            <span className="text-xl font-bold text-teal-600">{realTemps.cold}°C</span>
+                                        </div>
+                                        <input type="range" min="-15" max="25" value={realTemps.cold} onChange={(e) => handleTempChange('cold', parseInt(e.target.value))} className="w-full h-2 bg-teal-100 rounded-lg appearance-none cursor-pointer accent-teal-600" />
+                                    </div>
                                 </div>
                             )}
                         </div>
