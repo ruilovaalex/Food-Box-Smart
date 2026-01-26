@@ -3,8 +3,8 @@
 ¡Bienvenido al repositorio de **Food Box Smart**! Esta es una plataforma diseñada para modernizar la forma en que recogemos comida, eliminando las esperas y conectando el software con hardware real (IoT).
 
 ## ¿De qué trata el proyecto?
-La idea es simple pero potente: haces tu pedido desde la app, la cocina lo prepara y lo coloca en un casillero inteligente (Food Box). Tú recibes un código y, al llegar al local, simplemente lo digitas en el teclado físico para que tu comida salga fresca y lista.
-La idea es simple pero potente: haces tu pedido desde la app, la cocina lo prepara y lo coloca en un casillero inteligente (Food Box). Tú recibes un código y, al llegar al local, simplemente lo digitas en el teclado físico para que tu comida salga fresca y ¡listo!.
+La idea es simple pero potente: haces tu pedido desde la app, la cocina lo prepara y lo coloca en un casillero inteligente (Food Box Smart). Tú recibes un código y, al llegar al local, simplemente lo digitas en el teclado físico para que tu comida salga fresca y lista.
+La idea es simple pero potente: haces tu pedido desde la app, la cocina lo prepara y lo coloca en un casillero inteligente (Food Box Smart). Tú recibes un código y, al llegar al local, simplemente lo digitas en el teclado físico para que tu comida salga fresca y ¡listo!.
 
 ### Características principales:
 - **Gestión IoT en tiempo real**: Conexión directa con sensores de temperatura y teclados físicos mediante Firebase.
