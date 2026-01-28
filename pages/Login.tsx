@@ -12,7 +12,7 @@ const ASSETS = {
 
 const FloatingItem: React.FC<{ emoji: string, delay: number, duration: number, left: string, top: string, size: string }> = ({ emoji, delay, duration, left, top, size }) => (
   <div 
-    className="absolute pointer-events-none select-none animate-float opacity-[0.15]"
+    className="absolute pointer-events-none select-none animate-float opacity-[0.4]"
     style={{ 
       left, 
       top, 
@@ -91,41 +91,39 @@ export const Login: React.FC = () => {
   return (
     <div className={`min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden transition-all duration-1000 ${isAdminMode ? 'bg-slate-950' : 'bg-[#FDFCFB]'}`}>
       
-      {/* FONDO DINÁMICO MEJORADO */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
+      {/* FONDO DINÁMICO: ALIMENTOS MÁS VISIBLES */}
+      <div className="absolute inset-0 z-0 overflow-hidden bg-white">
           <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/cubes.png")' }}></div>
-          <div className={`absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full blur-[150px] transition-colors duration-1000 ${isAdminMode ? 'bg-primary/15' : 'bg-primary/20'}`}></div>
-          <div className={`absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[150px] transition-colors duration-1000 ${isAdminMode ? 'bg-accent/10' : 'bg-accent/15'}`}></div>
+          <div className={`absolute top-[-5%] left-[-5%] w-[80%] h-[80%] rounded-full blur-[160px] transition-colors duration-1000 ${isAdminMode ? 'bg-primary/15' : 'bg-primary/30'}`}></div>
+          <div className={`absolute bottom-[-5%] right-[-5%] w-[80%] h-[80%] rounded-full blur-[160px] transition-colors duration-1000 ${isAdminMode ? 'bg-accent/15' : 'bg-accent/25'}`}></div>
           
-          {Array.from({ length: 25 }).map((_, i) => (
+          {Array.from({ length: 30 }).map((_, i) => (
             <FloatingItem 
               key={i}
-              emoji={['🍔', '🍕', '🍟', '🥤', '🌮', '🍦', '🍩', '🍣'][i % 8]}
-              delay={i * 0.5}
-              duration={12 + (i % 6)}
-              left={`${(i * 12) % 100}%`}
-              top={`${(i * 11) % 100}%`}
-              size={['1.5rem', '2.5rem', '3.5rem'][i % 3]}
+              emoji={['🍔', '🍕', '🍟', '🥤', '🌮', '🍦', '🍩', '🍣', '🥨', '🍪'][i % 10]}
+              delay={i * 0.4}
+              duration={12 + (i % 8)}
+              left={`${(i * 13) % 100}%`}
+              top={`${(i * 17) % 100}%`}
+              size={['1.5rem', '2.5rem', '3.5rem', '4rem'][i % 4]}
             />
           ))}
       </div>
 
-      <div className={`w-full max-w-5xl bg-white/85 backdrop-blur-3xl rounded-[3.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col md:flex-row relative z-10 border border-white/60 transition-transform duration-500 ${shouldShake ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
+      <div className={`w-full max-w-5xl bg-white/90 backdrop-blur-3xl rounded-[4rem] shadow-[0_50px_150px_-30px_rgba(0,0,0,0.2)] overflow-hidden flex flex-col md:flex-row relative z-10 border border-white transition-transform duration-500 ${shouldShake ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
         
         {/* PANEL IZQUIERDO: Branding */}
-        <div className={`md:w-[42%] p-10 lg:p-16 flex flex-col items-center justify-center relative overflow-hidden text-center transition-all duration-1000 ${isAdminMode ? 'bg-slate-900' : 'bg-primary'}`}>
-             <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl"></div>
+        <div className={`md:w-[45%] p-12 lg:p-20 flex flex-col items-center justify-center relative overflow-hidden text-center transition-all duration-1000 ${isAdminMode ? 'bg-slate-900' : 'bg-primary'}`}>
+             <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl"></div>
              
-             {/* LOGO LIMPIO: Sin cajas, solo la imagen */}
-             <div className="relative z-10 mb-8 group flex items-center justify-center">
-                <div className="absolute inset-0 bg-white/40 rounded-full blur-[60px] transition-all duration-700 scale-110 opacity-60 group-hover:scale-125"></div>
-                
-                <div className="relative transition-all duration-500 hover:scale-[1.08]">
+             {/* LOGO: Circular y limpio */}
+             <div className="relative z-10 mb-10 group flex items-center justify-center">
+                <div className="relative transition-all duration-500 hover:scale-[1.05]">
                   {!logoError ? (
                       <img 
                           src={ASSETS.LOGO}
                           alt="Logo Food Box" 
-                          className={`w-60 h-60 md:w-80 md:h-80 object-contain transition-opacity duration-700 ${logoLoaded ? 'opacity-100' : 'opacity-0'} drop-shadow-[0_20px_40px_rgba(0,0,0,0.2)]`} 
+                          className={`w-64 h-64 md:w-80 md:h-80 object-contain rounded-full transition-opacity duration-700 ${logoLoaded ? 'opacity-100' : 'opacity-0'} drop-shadow-[0_25px_45px_rgba(0,0,0,0.3)]`} 
                           onLoad={() => setLogoLoaded(true)}
                           onError={() => setLogoError(true)}
                       />
@@ -134,65 +132,62 @@ export const Login: React.FC = () => {
                   )}
                   {!logoLoaded && !logoError && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
                     </div>
                   )}
                 </div>
              </div>
              
-             <div className="relative z-10 space-y-4">
-                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none drop-shadow-xl">Food Box<br/>Smart</h1>
-                <div className="h-1.5 w-16 bg-white/40 mx-auto rounded-full"></div>
-                <p className="text-white/80 text-[10px] font-black tracking-[0.5em] uppercase">
-                    {isAdminMode ? 'System Node v3.0' : 'Intelligent Dining'}
-                </p>
+             {/* TEXTO */}
+             <div className="relative z-10 mb-12">
+                <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter uppercase leading-[0.9] drop-shadow-2xl">
+                  Food Box<br/>Smart
+                </h1>
+                <div className="h-2 w-24 bg-white/20 mx-auto rounded-full mt-6 mb-2"></div>
+                <p className="text-white/60 text-[10px] font-black tracking-[0.6em] uppercase">Gastronomía Inteligente</p>
              </div>
 
-             {/* GIF DE SEGURIDAD AJUSTADO: Posición estratégica para evitar recortes */}
-             <div className="absolute bottom-12 left-12 z-20 flex items-center gap-5 bg-black/25 backdrop-blur-3xl px-6 py-4 rounded-[2.2rem] border border-white/20 transition-all hover:bg-black/40 group shadow-2xl">
+             {/* GIF DE SEGURIDAD: Ajustado a w-24 h-24 en la esquinita */}
+             <div className="absolute bottom-10 left-10 z-20 group">
                 {!gifError ? (
                     <img 
                         src={ASSETS.SECURITY_GIF}
                         alt="Security" 
-                        className="w-14 h-14 object-contain mix-blend-screen brightness-125 group-hover:scale-110 transition-transform"
+                        className="w-24 h-24 object-contain mix-blend-screen brightness-125 transition-transform duration-500 group-hover:scale-110"
                         onError={() => setGifError(true)}
                     />
                 ) : (
-                    <div className="text-lg opacity-40">{ASSETS.SECURITY_FALLBACK}</div>
+                    <div className="text-2xl opacity-20">{ASSETS.SECURITY_FALLBACK}</div>
                 )}
-                <div className="text-left">
-                  <p className="text-[8px] font-black text-white/50 uppercase tracking-[0.3em] leading-none mb-1">Encrypted</p>
-                  <p className="text-[11px] font-black text-white uppercase tracking-tight">IoT Protected</p>
-                </div>
              </div>
         </div>
 
         {/* PANEL DERECHO: Formulario */}
-        <div className="md:w-[58%] p-8 lg:p-20 flex flex-col justify-center bg-white/30 relative">
-            <div className="absolute top-8 right-8 flex bg-gray-100/60 backdrop-blur-2xl p-1.5 rounded-2xl border border-gray-200/40 z-30 shadow-sm">
+        <div className="md:w-[55%] p-10 lg:p-24 flex flex-col justify-center bg-white/5 relative">
+            <div className="absolute top-10 right-10 flex bg-gray-100/50 backdrop-blur-2xl p-1.5 rounded-2xl border border-gray-200/30 z-30 shadow-sm">
                 <button 
                     onClick={() => { setIsAdminMode(false); setError(''); }}
-                    className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all duration-300 ${!isAdminMode ? 'bg-white text-primary shadow-lg ring-1 ring-black/5' : 'text-gray-400'}`}
+                    className={`px-6 py-2.5 rounded-xl text-[10px] font-black transition-all duration-300 ${!isAdminMode ? 'bg-white text-primary shadow-lg ring-1 ring-black/5' : 'text-gray-400'}`}
                 >
                     CLIENTE
                 </button>
                 <button 
                     onClick={() => { setIsAdminMode(true); setError(''); }}
-                    className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all duration-300 ${isAdminMode ? 'bg-slate-800 text-white shadow-lg ring-1 ring-white/10' : 'text-gray-400'}`}
+                    className={`px-6 py-2.5 rounded-xl text-[10px] font-black transition-all duration-300 ${isAdminMode ? 'bg-slate-800 text-white shadow-lg ring-1 ring-white/10' : 'text-gray-400'}`}
                 >
                     ADMIN
                 </button>
             </div>
 
-            <div className="max-w-sm mx-auto w-full animate-slide-up">
-                <div className="mb-10 text-center md:text-left">
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary font-black text-[9px] uppercase tracking-widest mb-4">
+            <div className="max-w-md mx-auto w-full animate-slide-up">
+                <div className="mb-12 text-center md:text-left">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary font-black text-[10px] uppercase tracking-widest mb-6">
                         <span className="animate-pulse">●</span> {greeting}
                     </div>
-                    <h2 className="text-4xl font-black text-dark tracking-tighter mb-1">
-                        {isRegistering ? 'Crear Perfil' : 'Hola de nuevo'}
+                    <h2 className="text-5xl font-black text-dark tracking-tighter mb-2">
+                        {isRegistering ? 'Crear Cuenta' : 'Bienvenido'}
                     </h2>
-                    <p className="text-gray-400 text-sm font-medium">Accede a tu cuenta inteligente.</p>
+                    <p className="text-gray-400 text-lg font-medium">Ingresa para gestionar tus pedidos.</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -200,7 +195,7 @@ export const Login: React.FC = () => {
                         <div className="animate-fade-in">
                             <Input 
                                 label="Nombre" 
-                                placeholder="Tu nombre aquí" 
+                                placeholder="Escribe tu nombre" 
                                 value={name} 
                                 onChange={(e) => setName(e.target.value)} 
                                 icon="👤"
@@ -209,9 +204,9 @@ export const Login: React.FC = () => {
                     )}
 
                     <Input
-                        label={isAdminMode ? "ID Admin" : "Email"}
+                        label={isAdminMode ? "ID Administrador" : "Correo Electrónico"}
                         type={isAdminMode ? "text" : "email"}
-                        placeholder={isAdminMode ? "admin_user" : "tu@email.com"}
+                        placeholder={isAdminMode ? "admin_root" : "ejemplo@box.com"}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         icon={isAdminMode ? "🔑" : "✉️"}
@@ -230,45 +225,45 @@ export const Login: React.FC = () => {
                         <button 
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-4 top-[38px] text-gray-300 hover:text-primary transition-all p-2"
+                            className="absolute right-5 top-[42px] text-gray-300 hover:text-primary transition-all p-2"
                         >
                             {showPassword ? '👁️‍🗨️' : '👁️'}
                         </button>
                     </div>
 
-                    <div className="pt-2">
+                    <div className="pt-4">
                         <Button 
                             type="submit" 
                             fullWidth 
                             isLoading={loading} 
-                            className={`py-5 text-sm font-black tracking-widest uppercase transition-all duration-300 rounded-[1.8rem] ${isAdminMode ? 'bg-slate-800 shadow-slate-900/20' : 'shadow-primary/30'}`}
+                            className={`py-6 text-base font-black tracking-widest uppercase transition-all duration-300 rounded-[2rem] ${isAdminMode ? 'bg-slate-800 shadow-slate-900/20' : 'shadow-primary/30'}`}
                         >
-                            {isRegistering ? 'REGISTRARME' : 'ACCEDER'}
+                            {isRegistering ? 'REGISTRARME AHORA' : 'ENTRAR AL SISTEMA'}
                         </Button>
                     </div>
                 </form>
 
                 {!isAdminMode && (
-                    <div className="mt-8 text-center space-y-6">
+                    <div className="mt-12 text-center space-y-8">
                         <button 
                             onClick={loginAnonymously}
-                            className="text-gray-400 hover:text-primary font-black text-[10px] uppercase tracking-[0.3em] transition-all"
+                            className="text-gray-400 hover:text-primary font-black text-[11px] uppercase tracking-[0.4em] transition-all"
                         >
-                            Entrar como invitado
+                            Explorar como invitado
                         </button>
 
                         <div className="relative">
-                            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100/50"></div></div>
-                            <div className="relative flex justify-center text-[9px] font-black uppercase tracking-[0.3em]"><span className="px-3 bg-white/50 text-gray-300">Smart Connect</span></div>
+                            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100"></div></div>
+                            <div className="relative flex justify-center text-[10px] font-black uppercase tracking-[0.3em]"><span className="px-4 bg-white/50 text-gray-300">Smart Hub</span></div>
                         </div>
 
-                        <p className="text-xs text-gray-500 font-medium">
-                            {isRegistering ? '¿Ya eres miembro?' : '¿Sin cuenta?'}
+                        <p className="text-sm text-gray-500 font-medium">
+                            {isRegistering ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}
                             <button 
                                 onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
-                                className="ml-2 font-black text-primary hover:text-orange-600 transition-colors"
+                                className="ml-3 font-black text-primary hover:text-orange-600 transition-colors"
                             >
-                                {isRegistering ? 'Acceder' : 'Crear una'}
+                                {isRegistering ? 'Inicia Sesión' : 'Regístrate'}
                             </button>
                         </p>
                     </div>
@@ -280,14 +275,14 @@ export const Login: React.FC = () => {
       <style>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
-          20% { transform: translateX(-8px); }
-          40% { transform: translateX(8px); }
-          60% { transform: translateX(-8px); }
-          80% { transform: translateX(8px); }
+          20% { transform: translateX(-10px); }
+          40% { transform: translateX(10px); }
+          60% { transform: translateX(-10px); }
+          80% { transform: translateX(10px); }
         }
         @keyframes float {
           0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-40px) rotate(8deg); }
+          50% { transform: translateY(-50px) rotate(10deg); }
         }
         .animate-float {
           animation: float ease-in-out infinite;
