@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Button, Input } from '../components/UI';
 
 const ASSETS = {
-    // Estas rutas asumen que tienes una carpeta "images" en la raíz del proyecto
+    // Estas rutas funcionan porque los archivos están en public/images/
     LOGO: '/images/logo.png',
     SECURITY_GIF: '/images/calavera.gif',
     FALLBACK_EMOJI: '🍔',
@@ -13,7 +13,7 @@ const ASSETS = {
 
 const FloatingItem: React.FC<{ emoji: string, delay: number, duration: number, left: string, top: string, size: string }> = ({ emoji, delay, duration, left, top, size }) => (
   <div 
-    className="absolute pointer-events-none select-none animate-float opacity-[0.08]"
+    className="absolute pointer-events-none select-none animate-float opacity-[0.06]"
     style={{ 
       left, 
       top, 
@@ -41,7 +41,8 @@ export const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Estados de error de carga de assets
+  // Gestión de carga de imágenes
+  const [logoLoaded, setLogoLoaded] = useState(false);
   const [logoError, setLogoError] = useState(false);
   const [gifError, setGifError] = useState(false);
 
@@ -92,92 +93,91 @@ export const Login: React.FC = () => {
   return (
     <div className={`min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden transition-all duration-1000 ${isAdminMode ? 'bg-slate-950' : 'bg-[#FDFCFB]'}`}>
       
-      {/* FONDO DINÁMICO MEJORADO (UX UPGRADE) */}
+      {/* FONDO DINÁMICO */}
       <div className="absolute inset-0 z-0 overflow-hidden">
-          {/* Capa de textura sutil para mayor calidad visual */}
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/cubes.png")' }}></div>
+          <div className={`absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full blur-[150px] transition-colors duration-1000 ${isAdminMode ? 'bg-primary/10' : 'bg-primary/15'}`}></div>
+          <div className={`absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[150px] transition-colors duration-1000 ${isAdminMode ? 'bg-accent/5' : 'bg-accent/10'}`}></div>
           
-          {/* Orbes de luz con transiciones más suaves y profundidad */}
-          <div className={`absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full blur-[150px] transition-colors duration-1000 ${isAdminMode ? 'bg-primary/10' : 'bg-primary/20'}`}></div>
-          <div className={`absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[150px] transition-colors duration-1000 ${isAdminMode ? 'bg-accent/5' : 'bg-accent/15'}`}></div>
-          
-          {/* Comida flotante con varianza mejorada */}
-          {Array.from({ length: 22 }).map((_, i) => (
+          {Array.from({ length: 20 }).map((_, i) => (
             <FloatingItem 
               key={i}
               emoji={['🍔', '🍕', '🍟', '🥤', '🌮', '🍦', '🍩', '🍣'][i % 8]}
-              delay={i * 0.6}
-              duration={14 + (i % 6)}
-              left={`${(i * 18) % 100}%`}
-              top={`${(i * 14) % 100}%`}
-              size={['1.2rem', '2.2rem', '3.2rem'][i % 3]}
+              delay={i * 0.7}
+              duration={15 + (i % 5)}
+              left={`${(i * 15) % 100}%`}
+              top={`${(i * 13) % 100}%`}
+              size={['1rem', '2rem', '3rem'][i % 3]}
             />
           ))}
       </div>
 
-      <div className={`w-full max-w-5xl bg-white/75 backdrop-blur-3xl rounded-[4rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col md:flex-row relative z-10 border border-white/60 transition-transform duration-500 ${shouldShake ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
+      <div className={`w-full max-w-5xl bg-white/80 backdrop-blur-3xl rounded-[3.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.12)] overflow-hidden flex flex-col md:flex-row relative z-10 border border-white/60 transition-transform duration-500 ${shouldShake ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
         
-        {/* PANEL IZQUIERDO: Branding y Assets Propios */}
-        <div className={`md:w-[45%] p-10 lg:p-16 flex flex-col items-center justify-center relative overflow-hidden text-center transition-all duration-1000 ${isAdminMode ? 'bg-slate-900' : 'bg-primary'}`}>
+        {/* PANEL IZQUIERDO: Branding */}
+        <div className={`md:w-[42%] p-10 lg:p-16 flex flex-col items-center justify-center relative overflow-hidden text-center transition-all duration-1000 ${isAdminMode ? 'bg-slate-900' : 'bg-primary'}`}>
              <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl"></div>
-             <div className="absolute bottom-0 right-0 w-80 h-80 bg-black/5 rounded-full translate-x-1/3 translate-y-1/3 blur-3xl"></div>
              
-             {/* Contenedor del Logo con Glassmorphism mejorado */}
              <div className="relative z-10 mb-10 group">
-                <div className="absolute inset-0 bg-white/20 rounded-full blur-2xl group-hover:bg-white/30 transition-all duration-500 scale-110"></div>
-                <div className="relative bg-white/10 backdrop-blur-md rounded-[3.5rem] p-10 border border-white/20 shadow-2xl transition-all duration-500 group-hover:scale-[1.03] group-hover:rotate-1">
+                <div className="absolute inset-0 bg-white/20 rounded-full blur-2xl transition-all duration-500 scale-110"></div>
+                <div className="relative bg-white/10 backdrop-blur-md rounded-[3rem] p-8 border border-white/20 shadow-2xl transition-all duration-500 hover:scale-[1.02]">
                   {!logoError ? (
                       <img 
                           src={ASSETS.LOGO}
                           alt="Logo Food Box" 
-                          className="w-44 h-44 md:w-60 md:h-60 object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.3)] transition-all duration-700" 
+                          className={`w-40 h-40 md:w-56 md:h-56 object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.2)] transition-opacity duration-700 ${logoLoaded ? 'opacity-100' : 'opacity-0'}`} 
+                          onLoad={() => setLogoLoaded(true)}
                           onError={() => setLogoError(true)}
                       />
                   ) : (
-                      <div className="text-9xl animate-bounce-soft">{ASSETS.FALLBACK_EMOJI}</div>
+                      <div className="text-8xl animate-bounce-soft">{ASSETS.FALLBACK_EMOJI}</div>
+                  )}
+                  {!logoLoaded && !logoError && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                    </div>
                   )}
                 </div>
              </div>
              
              <div className="relative z-10 space-y-4">
-                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none drop-shadow-lg">Food Box<br/>Smart</h1>
-                <div className="h-1.5 w-16 bg-white/40 mx-auto rounded-full"></div>
-                <p className="text-white/80 text-xs md:text-sm font-black tracking-[0.4em] uppercase">
-                    {isAdminMode ? 'Control Center v3.0' : 'Tu comida, tu tiempo.'}
+                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none drop-shadow-md">Food Box<br/>Smart</h1>
+                <div className="h-1 w-12 bg-white/30 mx-auto rounded-full"></div>
+                <p className="text-white/70 text-xs font-black tracking-[0.4em] uppercase">
+                    {isAdminMode ? 'System Node v3.0' : 'Intelligent Dining'}
                 </p>
              </div>
 
-             {/* Contenedor del GIF de Seguridad propio */}
-             <div className="absolute bottom-10 left-10 z-20 flex items-center gap-3 bg-black/20 backdrop-blur-xl px-5 py-2.5 rounded-2xl border border-white/10 transition-all duration-500 hover:bg-black/40 group">
+             <div className="absolute bottom-8 left-8 z-20 flex items-center gap-3 bg-black/10 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 transition-all hover:bg-black/20 group">
                 {!gifError ? (
                     <img 
                         src={ASSETS.SECURITY_GIF}
                         alt="Security" 
-                        className="w-10 h-10 object-contain mix-blend-screen brightness-125 group-hover:scale-125 transition-transform"
+                        className="w-8 h-8 object-contain mix-blend-screen brightness-110 group-hover:scale-110 transition-transform"
                         onError={() => setGifError(true)}
                     />
                 ) : (
-                    <div className="text-xl opacity-50 grayscale">{ASSETS.SECURITY_FALLBACK}</div>
+                    <div className="text-lg opacity-40">{ASSETS.SECURITY_FALLBACK}</div>
                 )}
                 <div className="text-left">
-                  <p className="text-[8px] font-black text-white/40 uppercase tracking-widest">Secure Node</p>
-                  <p className="text-[10px] font-bold text-white uppercase tracking-tighter">IoT Verified</p>
+                  <p className="text-[7px] font-black text-white/40 uppercase tracking-widest leading-none">Status</p>
+                  <p className="text-[9px] font-bold text-white uppercase tracking-tight">IoT Secured</p>
                 </div>
              </div>
         </div>
 
-        {/* PANEL DERECHO: Formulario de Acceso */}
-        <div className="md:w-[55%] p-8 lg:p-20 flex flex-col justify-center bg-white/10 relative">
-            <div className="absolute top-10 right-10 flex bg-gray-100/60 backdrop-blur-2xl p-1.5 rounded-2xl border border-gray-200/40 z-30 shadow-sm">
+        {/* PANEL DERECHO: Formulario */}
+        <div className="md:w-[58%] p-8 lg:p-20 flex flex-col justify-center bg-white/20 relative">
+            <div className="absolute top-8 right-8 flex bg-gray-100/50 backdrop-blur-2xl p-1 rounded-2xl border border-gray-200/30 z-30 shadow-sm">
                 <button 
                     onClick={() => { setIsAdminMode(false); setError(''); }}
-                    className={`px-6 py-2 rounded-xl text-xs font-black transition-all duration-500 ${!isAdminMode ? 'bg-white text-primary shadow-xl scale-105' : 'text-gray-400 hover:text-gray-600'}`}
+                    className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all duration-300 ${!isAdminMode ? 'bg-white text-primary shadow-lg' : 'text-gray-400'}`}
                 >
                     CLIENTE
                 </button>
                 <button 
                     onClick={() => { setIsAdminMode(true); setError(''); }}
-                    className={`px-6 py-2 rounded-xl text-xs font-black transition-all duration-500 ${isAdminMode ? 'bg-slate-800 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-600'}`}
+                    className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all duration-300 ${isAdminMode ? 'bg-slate-800 text-white shadow-lg' : 'text-gray-400'}`}
                 >
                     ADMIN
                 </button>
@@ -185,21 +185,21 @@ export const Login: React.FC = () => {
 
             <div className="max-w-sm mx-auto w-full animate-slide-up">
                 <div className="mb-10 text-center md:text-left">
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/5 border border-primary/10 text-primary font-black text-[10px] uppercase tracking-widest mb-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/10 text-primary font-black text-[9px] uppercase tracking-widest mb-4">
                         <span className="animate-pulse">●</span> {greeting}
                     </div>
-                    <h2 className="text-4xl font-black text-dark tracking-tighter mb-2 leading-none">
-                        {isRegistering ? 'Únete al Club' : 'Te extrañamos'}
+                    <h2 className="text-4xl font-black text-dark tracking-tighter mb-1">
+                        {isRegistering ? 'Crear Perfil' : 'Hola de nuevo'}
                     </h2>
-                    <p className="text-gray-400 text-sm font-medium">Ingresa tus credenciales maestras.</p>
+                    <p className="text-gray-400 text-sm font-medium">Ingresa para gestionar tus pedidos.</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-5">
                     {isRegistering && !isAdminMode && (
                         <div className="animate-fade-in">
                             <Input 
-                                label="Nombre Completo" 
-                                placeholder="Ej. Juan Pérez" 
+                                label="Nombre" 
+                                placeholder="Tu nombre aquí" 
                                 value={name} 
                                 onChange={(e) => setName(e.target.value)} 
                                 icon="👤"
@@ -208,9 +208,9 @@ export const Login: React.FC = () => {
                     )}
 
                     <Input
-                        label={isAdminMode ? "Usuario Maestro" : "Email"}
+                        label={isAdminMode ? "ID Admin" : "Email"}
                         type={isAdminMode ? "text" : "email"}
-                        placeholder={isAdminMode ? "admin_foodbox" : "tu@correo.com"}
+                        placeholder={isAdminMode ? "admin_user" : "tu@email.com"}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         icon={isAdminMode ? "🔑" : "✉️"}
@@ -229,47 +229,45 @@ export const Login: React.FC = () => {
                         <button 
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-4 top-[42px] text-gray-400 hover:text-primary transition-all p-1 active:scale-90"
+                            className="absolute right-4 top-[38px] text-gray-300 hover:text-primary transition-all p-1"
                         >
                             {showPassword ? '👁️‍🗨️' : '👁️'}
                         </button>
                     </div>
 
-                    <div className="pt-4">
+                    <div className="pt-2">
                         <Button 
                             type="submit" 
                             fullWidth 
                             isLoading={loading} 
-                            className={`py-5 text-lg font-black tracking-widest uppercase transition-all duration-500 rounded-3xl ${isAdminMode ? 'bg-slate-800 hover:bg-slate-900 shadow-slate-900/20' : 'shadow-orange-500/30'}`}
+                            className={`py-4 text-sm font-black tracking-widest uppercase transition-all duration-300 rounded-2xl ${isAdminMode ? 'bg-slate-800 shadow-slate-900/10' : ''}`}
                         >
-                            {isRegistering ? 'CREAR CUENTA' : 'ENTRAR AHORA'}
+                            {isRegistering ? 'REGISTRARME' : 'ACCEDER'}
                         </Button>
                     </div>
                 </form>
 
                 {!isAdminMode && (
-                    <div className="mt-10 text-center space-y-6">
+                    <div className="mt-8 text-center space-y-5">
                         <button 
                             onClick={loginAnonymously}
-                            className="group flex items-center justify-center gap-2 mx-auto text-gray-400 hover:text-primary font-black text-xs uppercase tracking-[0.3em] transition-all"
+                            className="text-gray-400 hover:text-primary font-black text-[10px] uppercase tracking-[0.2em] transition-all"
                         >
-                            <span className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all">✨</span>
                             Ver menú como invitado
-                            <span className="opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all">✨</span>
                         </button>
 
-                        <div className="relative pt-2">
+                        <div className="relative">
                             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100"></div></div>
-                            <div className="relative flex justify-center text-[10px]"><span className="px-4 bg-white/50 backdrop-blur-md text-gray-300 font-black uppercase tracking-widest">O</span></div>
+                            <div className="relative flex justify-center text-[9px] font-black uppercase tracking-widest"><span className="px-3 bg-white/50 text-gray-300">O</span></div>
                         </div>
 
-                        <p className="text-sm text-gray-500 font-medium">
-                            {isRegistering ? '¿Ya tienes cuenta?' : '¿Nuevo en Food Box?'}
+                        <p className="text-xs text-gray-500 font-medium">
+                            {isRegistering ? '¿Ya eres miembro?' : '¿Sin cuenta?'}
                             <button 
                                 onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
-                                className="ml-2 font-black text-primary hover:text-orange-600 transition-colors underline-offset-8 hover:underline"
+                                className="ml-2 font-black text-primary hover:text-orange-600 transition-colors"
                             >
-                                {isRegistering ? 'Inicia Sesión' : 'Crea una aquí'}
+                                {isRegistering ? 'Loguéate' : 'Crea una'}
                             </button>
                         </p>
                     </div>
@@ -281,12 +279,12 @@ export const Login: React.FC = () => {
       <style>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-8px); }
-          75% { transform: translateX(8px); }
+          25% { transform: translateX(-6px); }
+          75% { transform: translateX(6px); }
         }
         @keyframes float {
-          0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.08; }
-          50% { transform: translateY(-45px) rotate(10deg); opacity: 0.12; }
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-30px) rotate(5deg); }
         }
         .animate-float {
           animation: float ease-in-out infinite;
