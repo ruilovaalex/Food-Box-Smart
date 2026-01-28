@@ -125,7 +125,7 @@ export const Login: React.FC = () => {
                       <img 
                           src={ASSETS.LOGO}
                           alt="Logo Food Box" 
-                          className={`w-40 h-40 md:w-56 md:h-56 object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.2)] transition-opacity duration-700 ${logoLoaded ? 'opacity-100' : 'opacity-0'}`} 
+                          className={`w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.2)] transition-opacity duration-700 ${logoLoaded ? 'opacity-100' : 'opacity-0'}`} 
                           onLoad={() => setLogoLoaded(true)}
                           onError={() => setLogoError(true)}
                       />
@@ -148,12 +148,12 @@ export const Login: React.FC = () => {
                 </p>
              </div>
 
-             <div className="absolute bottom-8 left-8 z-20 flex items-center gap-3 bg-black/10 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 transition-all hover:bg-black/20 group">
+             <div className="absolute bottom-8 left-8 z-20 flex items-center gap-4 bg-black/10 backdrop-blur-xl px-5 py-3 rounded-2xl border border-white/10 transition-all hover:bg-black/20 group">
                 {!gifError ? (
                     <img 
                         src={ASSETS.SECURITY_GIF}
                         alt="Security" 
-                        className="w-8 h-8 object-contain mix-blend-screen brightness-110 group-hover:scale-110 transition-transform"
+                        className="w-12 h-12 object-contain mix-blend-screen brightness-110 group-hover:scale-110 transition-transform"
                         onError={() => setGifError(true)}
                     />
                 ) : (
@@ -161,7 +161,7 @@ export const Login: React.FC = () => {
                 )}
                 <div className="text-left">
                   <p className="text-[7px] font-black text-white/40 uppercase tracking-widest leading-none">Status</p>
-                  <p className="text-[9px] font-bold text-white uppercase tracking-tight">IoT Secured</p>
+                  <p className="text-[10px] font-bold text-white uppercase tracking-tight">IoT Secured</p>
                 </div>
              </div>
         </div>
