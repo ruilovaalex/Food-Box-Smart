@@ -53,29 +53,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     <NotificationContext.Provider value={{ notifications, addNotification, markAsRead, unreadCount }}>
       {children}
       
-      {/* Toast Overlay UI */}
-      <div className="fixed bottom-24 right-6 z-[60] flex flex-col gap-3 pointer-events-none max-w-sm w-full">
-        {notifications.filter(n => !n.read).slice(0, 3).map((n, i) => (
-          <div 
-            key={n.id} 
-            className={`pointer-events-auto animate-slide-up p-4 rounded-2xl shadow-2xl backdrop-blur-xl border border-white/50 flex items-start gap-4 transform transition-all hover:scale-105 cursor-pointer ${
-              n.type === 'critical' ? 'bg-red-500/90 text-white' : 
-              n.type === 'offer' ? 'bg-amber-400/90 text-amber-950' : 
-              'bg-white/90 text-dark'
-            }`}
-            onClick={() => markAsRead(n.id)}
-          >
-            <div className="text-2xl">
-              {n.type === 'critical' ? '🚨' : n.type === 'offer' ? '✨' : '🔔'}
-            </div>
-            <div className="flex-1">
-              <h4 className="font-black text-xs uppercase tracking-widest opacity-80 mb-0.5">{n.title}</h4>
-              <p className="text-sm font-bold leading-tight">{n.body}</p>
-            </div>
-            <button className="opacity-50 hover:opacity-100">✕</button>
-          </div>
-        ))}
-      </div>
+      {/* Toast Overlay UI removido para evitar notificaciones tipo burbuja */}
     </NotificationContext.Provider>
   );
 };

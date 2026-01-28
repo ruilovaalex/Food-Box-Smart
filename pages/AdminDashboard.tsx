@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { database } from '../services/database';
 import { PRODUCTS } from '../constants';
 
-type TabView = 'dashboard' | 'kitchen' | 'inventory' | 'sensors';
+type TabView = 'dashboard' | 'kitchen' | 'history' | 'inventory' | 'sensors';
 
 const StatCard: React.FC<{ title: string, value: string | number, sub: string, icon: string, colorClass: string }> = ({ title, value, sub, icon, colorClass }) => (
     <div className="relative overflow-hidden bg-white rounded-[2rem] p-6 shadow-lg border border-gray-100 transition-all duration-300">
@@ -32,31 +32,19 @@ export const AdminDashboard: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isSimMode, setIsSimMode] = useState(false);
     
-    const lastAlertTime = useRef({ hot: 0, cold: 0 });
-
     const pendingOrders = useMemo(() => orders.filter(o => o.status === 'pending'), [orders]);
+    const allOrdersSorted = useMemo(() => [...orders].sort((a, b) => b.createdAt - a.createdAt), [orders]);
 
     const tempAlerts = useMemo(() => {
         const alerts: { msg: string; type: 'warning' | 'critical' }[] = [];
-        const now = Date.now();
-        const COOLDOWN = 60000;
-
         if (realTemps.hot < 60) {
             alerts.push({ msg: "Calor Crítico: Temperatura insuficiente", type: 'critical' });
-            if (now - lastAlertTime.current.hot > COOLDOWN) {
-                addNotification({ title: "🚨 FALLA CALOR", body: "Temperatura del casillero caliente por debajo de 60°C", type: 'critical' });
-                lastAlertTime.current.hot = now;
-            }
         }
         if (realTemps.cold > 8) {
             alerts.push({ msg: "Frío Crítico: Pérdida de refrigeración", type: 'critical' });
-            if (now - lastAlertTime.current.cold > COOLDOWN) {
-                addNotification({ title: "❄️ FALLA FRÍO", body: "Temperatura del casillero frío ha superado los 8°C", type: 'critical' });
-                lastAlertTime.current.cold = now;
-            }
         }
         return alerts;
-    }, [realTemps, addNotification]);
+    }, [realTemps]);
 
     const stats = useMemo(() => {
         let income = 0;
@@ -75,7 +63,6 @@ export const AdminDashboard: React.FC = () => {
             if (o.status !== 'cancelled') {
                 income += (o.total || 0);
                 
-                // Daily sales logic
                 const dayLabel = new Date(o.createdAt).toLocaleDateString('es-ES', { weekday: 'short' });
                 if (dailySales[dayLabel] !== undefined) {
                     dailySales[dayLabel] += o.total;
@@ -141,15 +128,16 @@ export const AdminDashboard: React.FC = () => {
             <div className="max-w-7xl mx-auto px-6 -mt-20 relative z-20 mb-12">
                 <div className="bg-white/80 backdrop-blur-xl p-2 rounded-[2.5rem] shadow-2xl flex gap-2 overflow-x-auto no-scrollbar border border-white/50">
                     {[
-                        { id: 'kitchen', label: 'Cocina / Pedidos', icon: '🔥' },
-                        { id: 'dashboard', label: 'Estadísticas', icon: '📊' },
-                        { id: 'inventory', label: 'Inventario', icon: '📦' },
+                        { id: 'kitchen', label: 'Cocina', icon: '🔥' },
+                        { id: 'history', label: 'Órdenes', icon: '📜' },
+                        { id: 'dashboard', label: 'Reportes', icon: '📊' },
+                        { id: 'inventory', label: 'Stock', icon: '📦' },
                         { id: 'sensors', label: 'Sensores', icon: '🌡️' },
                     ].map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setCurrentTab(tab.id as TabView)}
-                            className={`flex items-center gap-3 px-10 py-5 rounded-[2rem] font-black text-sm transition-all whitespace-nowrap ${
+                            className={`flex items-center gap-3 px-8 py-5 rounded-[2rem] font-black text-sm transition-all whitespace-nowrap ${
                                 currentTab === tab.id ? 'bg-primary text-white shadow-2xl scale-105' : 'text-gray-400 hover:bg-white/50'
                             }`}
                         >
@@ -204,13 +192,6 @@ export const AdminDashboard: React.FC = () => {
                                         </div>
 
                                         <div className="pt-6 border-t border-gray-100 flex flex-col gap-4">
-                                            <div className="flex justify-between items-center px-2">
-                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ubicación Requerida</span>
-                                                <div className="flex gap-2">
-                                                    {order.items.some(i => i.type === 'hot') && <Badge type="hot" />}
-                                                    {order.items.some(i => i.type === 'cold') && <Badge type="cold" />}
-                                                </div>
-                                            </div>
                                             <Button 
                                                 onClick={() => handleSendToBox(order.id)}
                                                 fullWidth
@@ -227,9 +208,60 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                 )}
 
+                {currentTab === 'history' && (
+                    <div className="animate-fade-in bg-white rounded-[3rem] shadow-xl border border-gray-100 overflow-hidden">
+                        <div className="p-10 border-b border-gray-50 flex justify-between items-end">
+                            <div>
+                                <h3 className="text-2xl font-black text-dark tracking-tight uppercase italic">Registro Maestro de Ventas</h3>
+                                <p className="text-gray-400 text-sm font-medium">Revisión detallada de cada orden generada en el sistema.</p>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Total Órdenes</span>
+                                <p className="text-2xl font-black text-dark">{allOrdersSorted.length}</p>
+                            </div>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-gray-50/50">
+                                    <tr>
+                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Fecha y Hora</th>
+                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Cliente</th>
+                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">ID Orden</th>
+                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Estado</th>
+                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">Monto</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {allOrdersSorted.map(order => (
+                                        <tr key={order.id} className="hover:bg-gray-50/50 transition-colors group">
+                                            <td className="px-10 py-6">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-dark">{new Date(order.createdAt).toLocaleDateString()}</span>
+                                                    <span className="text-[10px] text-gray-400 font-bold">{new Date(order.createdAt).toLocaleTimeString()}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-10 py-6">
+                                                <span className="font-black text-dark text-sm uppercase tracking-tight">{order.customerDetails?.name || 'Invitado'}</span>
+                                            </td>
+                                            <td className="px-10 py-6">
+                                                <span className="text-xs font-mono font-bold text-gray-400 group-hover:text-primary transition-colors">#{order.id}</span>
+                                            </td>
+                                            <td className="px-10 py-6">
+                                                <Badge type={order.status} className="!text-[9px]" />
+                                            </td>
+                                            <td className="px-10 py-6 text-right">
+                                                <span className="font-black text-dark tracking-tighter text-lg">${order.total.toFixed(2)}</span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
                 {currentTab === 'dashboard' && (
                     <div className="animate-fade-in space-y-10">
-                        {/* Key Stats Row */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                             <StatCard title="Ingresos" value={`$${stats.income.toFixed(2)}`} sub="Total ventas brutas" icon="💰" colorClass="from-green-400 to-emerald-600" />
                             <StatCard title="Vendidos" value={stats.units} sub="Unidades totales" icon="📦" colorClass="from-blue-400 to-indigo-600" />
@@ -237,7 +269,6 @@ export const AdminDashboard: React.FC = () => {
                             <StatCard title="Alertas" value={tempAlerts.length} sub="Incidencias activas" icon="🚨" colorClass="from-red-400 to-orange-600" />
                         </div>
 
-                        {/* Chart Row */}
                         <Card className="p-10 !rounded-[3rem] border border-gray-100">
                             <div className="flex justify-between items-end mb-10">
                                 <div>
@@ -256,16 +287,13 @@ export const AdminDashboard: React.FC = () => {
                                     const heightPercent = (data.val / maxVal) * 100;
                                     return (
                                         <div key={i} className="flex-1 flex flex-col items-center group relative">
-                                            {/* Tooltip on hover */}
                                             <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-dark text-white text-[10px] font-bold px-2 py-1 rounded-lg pointer-events-none">
                                                 ${data.val.toFixed(2)}
                                             </div>
-                                            {/* Bar */}
                                             <div 
                                                 className="w-full bg-gradient-to-t from-primary/80 to-primary rounded-t-2xl transition-all duration-1000 shadow-lg shadow-orange-500/10 hover:brightness-110" 
                                                 style={{ height: `${heightPercent}%`, minHeight: data.val > 0 ? '8px' : '2px' }}
                                             />
-                                            {/* Label */}
                                             <span className="mt-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">{data.day}</span>
                                         </div>
                                     );
@@ -273,7 +301,6 @@ export const AdminDashboard: React.FC = () => {
                             </div>
                         </Card>
 
-                        {/* Units Sold Detail Row - Aggregated and Sorted by Units Sold */}
                         <div className="bg-white rounded-[3rem] shadow-xl border border-gray-100 overflow-hidden">
                             <div className="p-10 border-b border-gray-50">
                                 <h3 className="text-2xl font-black text-dark tracking-tight uppercase italic">Rendimiento por Producto</h3>
