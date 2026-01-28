@@ -118,14 +118,16 @@ export const Login: React.FC = () => {
         <div className={`md:w-[42%] p-10 lg:p-16 flex flex-col items-center justify-center relative overflow-hidden text-center transition-all duration-1000 ${isAdminMode ? 'bg-slate-900' : 'bg-primary'}`}>
              <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl"></div>
              
-             <div className="relative z-10 mb-10 group">
-                <div className="absolute inset-0 bg-white/20 rounded-full blur-2xl transition-all duration-500 scale-110"></div>
-                <div className="relative bg-white/10 backdrop-blur-md rounded-[3rem] p-8 border border-white/20 shadow-2xl transition-all duration-500 hover:scale-[1.02]">
+             <div className="relative z-10 mb-8 group flex items-center justify-center">
+                {/* Glow circular suave detrás del logo */}
+                <div className="absolute inset-0 bg-white/30 rounded-full blur-3xl transition-all duration-500 scale-125 group-hover:scale-150 group-hover:bg-white/40"></div>
+                
+                <div className="relative transition-all duration-500 hover:scale-[1.05]">
                   {!logoError ? (
                       <img 
                           src={ASSETS.LOGO}
                           alt="Logo Food Box" 
-                          className={`w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.2)] transition-opacity duration-700 ${logoLoaded ? 'opacity-100' : 'opacity-0'}`} 
+                          className={`w-52 h-52 md:w-72 md:h-72 object-contain rounded-full drop-shadow-[0_15px_35px_rgba(0,0,0,0.25)] transition-opacity duration-700 ${logoLoaded ? 'opacity-100' : 'opacity-0'}`} 
                           onLoad={() => setLogoLoaded(true)}
                           onError={() => setLogoError(true)}
                       />
@@ -134,7 +136,7 @@ export const Login: React.FC = () => {
                   )}
                   {!logoLoaded && !logoError && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                        <div className="w-14 h-14 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
                     </div>
                   )}
                 </div>
@@ -142,26 +144,27 @@ export const Login: React.FC = () => {
              
              <div className="relative z-10 space-y-4">
                 <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none drop-shadow-md">Food Box<br/>Smart</h1>
-                <div className="h-1 w-12 bg-white/30 mx-auto rounded-full"></div>
+                <div className="h-1.5 w-16 bg-white/30 mx-auto rounded-full"></div>
                 <p className="text-white/70 text-xs font-black tracking-[0.4em] uppercase">
                     {isAdminMode ? 'System Node v3.0' : 'Intelligent Dining'}
                 </p>
              </div>
 
-             <div className="absolute bottom-8 left-8 z-20 flex items-center gap-4 bg-black/10 backdrop-blur-xl px-5 py-3 rounded-2xl border border-white/10 transition-all hover:bg-black/20 group">
+             {/* Ajuste del GIF para que no se vea recortado y tenga buen aire */}
+             <div className="absolute bottom-10 left-10 z-20 flex items-center gap-5 bg-black/20 backdrop-blur-2xl px-6 py-4 rounded-[2rem] border border-white/20 transition-all hover:bg-black/30 group shadow-2xl">
                 {!gifError ? (
                     <img 
                         src={ASSETS.SECURITY_GIF}
                         alt="Security" 
-                        className="w-12 h-12 object-contain mix-blend-screen brightness-110 group-hover:scale-110 transition-transform"
+                        className="w-14 h-14 object-contain mix-blend-screen brightness-125 group-hover:scale-110 transition-transform"
                         onError={() => setGifError(true)}
                     />
                 ) : (
                     <div className="text-lg opacity-40">{ASSETS.SECURITY_FALLBACK}</div>
                 )}
                 <div className="text-left">
-                  <p className="text-[7px] font-black text-white/40 uppercase tracking-widest leading-none">Status</p>
-                  <p className="text-[10px] font-bold text-white uppercase tracking-tight">IoT Secured</p>
+                  <p className="text-[8px] font-black text-white/50 uppercase tracking-[0.3em] leading-none mb-1">Protection</p>
+                  <p className="text-[11px] font-black text-white uppercase tracking-tight">IoT Secured System</p>
                 </div>
              </div>
         </div>
