@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { Button, Input } from '../components/UI';
 
 const ASSETS = {
-    // Estas rutas funcionan porque los archivos están en public/images/
     LOGO: '/images/logo.png',
     SECURITY_GIF: '/images/calavera.gif',
     FALLBACK_EMOJI: '🍔',
@@ -13,7 +12,7 @@ const ASSETS = {
 
 const FloatingItem: React.FC<{ emoji: string, delay: number, duration: number, left: string, top: string, size: string }> = ({ emoji, delay, duration, left, top, size }) => (
   <div 
-    className="absolute pointer-events-none select-none animate-float opacity-[0.06]"
+    className="absolute pointer-events-none select-none animate-float opacity-[0.15]"
     style={{ 
       left, 
       top, 
@@ -41,7 +40,6 @@ export const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Gestión de carga de imágenes
   const [logoLoaded, setLogoLoaded] = useState(false);
   const [logoError, setLogoError] = useState(false);
   const [gifError, setGifError] = useState(false);
@@ -93,65 +91,65 @@ export const Login: React.FC = () => {
   return (
     <div className={`min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden transition-all duration-1000 ${isAdminMode ? 'bg-slate-950' : 'bg-[#FDFCFB]'}`}>
       
-      {/* FONDO DINÁMICO */}
+      {/* FONDO DINÁMICO MEJORADO */}
       <div className="absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/cubes.png")' }}></div>
-          <div className={`absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full blur-[150px] transition-colors duration-1000 ${isAdminMode ? 'bg-primary/10' : 'bg-primary/15'}`}></div>
-          <div className={`absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[150px] transition-colors duration-1000 ${isAdminMode ? 'bg-accent/5' : 'bg-accent/10'}`}></div>
+          <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/cubes.png")' }}></div>
+          <div className={`absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full blur-[150px] transition-colors duration-1000 ${isAdminMode ? 'bg-primary/15' : 'bg-primary/20'}`}></div>
+          <div className={`absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[150px] transition-colors duration-1000 ${isAdminMode ? 'bg-accent/10' : 'bg-accent/15'}`}></div>
           
-          {Array.from({ length: 20 }).map((_, i) => (
+          {Array.from({ length: 25 }).map((_, i) => (
             <FloatingItem 
               key={i}
               emoji={['🍔', '🍕', '🍟', '🥤', '🌮', '🍦', '🍩', '🍣'][i % 8]}
-              delay={i * 0.7}
-              duration={15 + (i % 5)}
-              left={`${(i * 15) % 100}%`}
-              top={`${(i * 13) % 100}%`}
-              size={['1rem', '2rem', '3rem'][i % 3]}
+              delay={i * 0.5}
+              duration={12 + (i % 6)}
+              left={`${(i * 12) % 100}%`}
+              top={`${(i * 11) % 100}%`}
+              size={['1.5rem', '2.5rem', '3.5rem'][i % 3]}
             />
           ))}
       </div>
 
-      <div className={`w-full max-w-5xl bg-white/80 backdrop-blur-3xl rounded-[3.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.12)] overflow-hidden flex flex-col md:flex-row relative z-10 border border-white/60 transition-transform duration-500 ${shouldShake ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
+      <div className={`w-full max-w-5xl bg-white/85 backdrop-blur-3xl rounded-[3.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col md:flex-row relative z-10 border border-white/60 transition-transform duration-500 ${shouldShake ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
         
         {/* PANEL IZQUIERDO: Branding */}
         <div className={`md:w-[42%] p-10 lg:p-16 flex flex-col items-center justify-center relative overflow-hidden text-center transition-all duration-1000 ${isAdminMode ? 'bg-slate-900' : 'bg-primary'}`}>
              <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl"></div>
              
+             {/* LOGO LIMPIO: Sin cajas, solo la imagen */}
              <div className="relative z-10 mb-8 group flex items-center justify-center">
-                {/* Glow circular suave detrás del logo */}
-                <div className="absolute inset-0 bg-white/30 rounded-full blur-3xl transition-all duration-500 scale-125 group-hover:scale-150 group-hover:bg-white/40"></div>
+                <div className="absolute inset-0 bg-white/40 rounded-full blur-[60px] transition-all duration-700 scale-110 opacity-60 group-hover:scale-125"></div>
                 
-                <div className="relative transition-all duration-500 hover:scale-[1.05]">
+                <div className="relative transition-all duration-500 hover:scale-[1.08]">
                   {!logoError ? (
                       <img 
                           src={ASSETS.LOGO}
                           alt="Logo Food Box" 
-                          className={`w-52 h-52 md:w-72 md:h-72 object-contain rounded-full drop-shadow-[0_15px_35px_rgba(0,0,0,0.25)] transition-opacity duration-700 ${logoLoaded ? 'opacity-100' : 'opacity-0'}`} 
+                          className={`w-60 h-60 md:w-80 md:h-80 object-contain transition-opacity duration-700 ${logoLoaded ? 'opacity-100' : 'opacity-0'} drop-shadow-[0_20px_40px_rgba(0,0,0,0.2)]`} 
                           onLoad={() => setLogoLoaded(true)}
                           onError={() => setLogoError(true)}
                       />
                   ) : (
-                      <div className="text-8xl animate-bounce-soft">{ASSETS.FALLBACK_EMOJI}</div>
+                      <div className="text-9xl animate-bounce-soft">{ASSETS.FALLBACK_EMOJI}</div>
                   )}
                   {!logoLoaded && !logoError && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-14 h-14 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
                     </div>
                   )}
                 </div>
              </div>
              
              <div className="relative z-10 space-y-4">
-                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none drop-shadow-md">Food Box<br/>Smart</h1>
-                <div className="h-1.5 w-16 bg-white/30 mx-auto rounded-full"></div>
-                <p className="text-white/70 text-xs font-black tracking-[0.4em] uppercase">
+                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none drop-shadow-xl">Food Box<br/>Smart</h1>
+                <div className="h-1.5 w-16 bg-white/40 mx-auto rounded-full"></div>
+                <p className="text-white/80 text-[10px] font-black tracking-[0.5em] uppercase">
                     {isAdminMode ? 'System Node v3.0' : 'Intelligent Dining'}
                 </p>
              </div>
 
-             {/* Ajuste del GIF para que no se vea recortado y tenga buen aire */}
-             <div className="absolute bottom-10 left-10 z-20 flex items-center gap-5 bg-black/20 backdrop-blur-2xl px-6 py-4 rounded-[2rem] border border-white/20 transition-all hover:bg-black/30 group shadow-2xl">
+             {/* GIF DE SEGURIDAD AJUSTADO: Posición estratégica para evitar recortes */}
+             <div className="absolute bottom-12 left-12 z-20 flex items-center gap-5 bg-black/25 backdrop-blur-3xl px-6 py-4 rounded-[2.2rem] border border-white/20 transition-all hover:bg-black/40 group shadow-2xl">
                 {!gifError ? (
                     <img 
                         src={ASSETS.SECURITY_GIF}
@@ -163,24 +161,24 @@ export const Login: React.FC = () => {
                     <div className="text-lg opacity-40">{ASSETS.SECURITY_FALLBACK}</div>
                 )}
                 <div className="text-left">
-                  <p className="text-[8px] font-black text-white/50 uppercase tracking-[0.3em] leading-none mb-1">Protection</p>
-                  <p className="text-[11px] font-black text-white uppercase tracking-tight">IoT Secured System</p>
+                  <p className="text-[8px] font-black text-white/50 uppercase tracking-[0.3em] leading-none mb-1">Encrypted</p>
+                  <p className="text-[11px] font-black text-white uppercase tracking-tight">IoT Protected</p>
                 </div>
              </div>
         </div>
 
         {/* PANEL DERECHO: Formulario */}
-        <div className="md:w-[58%] p-8 lg:p-20 flex flex-col justify-center bg-white/20 relative">
-            <div className="absolute top-8 right-8 flex bg-gray-100/50 backdrop-blur-2xl p-1 rounded-2xl border border-gray-200/30 z-30 shadow-sm">
+        <div className="md:w-[58%] p-8 lg:p-20 flex flex-col justify-center bg-white/30 relative">
+            <div className="absolute top-8 right-8 flex bg-gray-100/60 backdrop-blur-2xl p-1.5 rounded-2xl border border-gray-200/40 z-30 shadow-sm">
                 <button 
                     onClick={() => { setIsAdminMode(false); setError(''); }}
-                    className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all duration-300 ${!isAdminMode ? 'bg-white text-primary shadow-lg' : 'text-gray-400'}`}
+                    className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all duration-300 ${!isAdminMode ? 'bg-white text-primary shadow-lg ring-1 ring-black/5' : 'text-gray-400'}`}
                 >
                     CLIENTE
                 </button>
                 <button 
                     onClick={() => { setIsAdminMode(true); setError(''); }}
-                    className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all duration-300 ${isAdminMode ? 'bg-slate-800 text-white shadow-lg' : 'text-gray-400'}`}
+                    className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all duration-300 ${isAdminMode ? 'bg-slate-800 text-white shadow-lg ring-1 ring-white/10' : 'text-gray-400'}`}
                 >
                     ADMIN
                 </button>
@@ -188,16 +186,16 @@ export const Login: React.FC = () => {
 
             <div className="max-w-sm mx-auto w-full animate-slide-up">
                 <div className="mb-10 text-center md:text-left">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/10 text-primary font-black text-[9px] uppercase tracking-widest mb-4">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary font-black text-[9px] uppercase tracking-widest mb-4">
                         <span className="animate-pulse">●</span> {greeting}
                     </div>
                     <h2 className="text-4xl font-black text-dark tracking-tighter mb-1">
                         {isRegistering ? 'Crear Perfil' : 'Hola de nuevo'}
                     </h2>
-                    <p className="text-gray-400 text-sm font-medium">Ingresa para gestionar tus pedidos.</p>
+                    <p className="text-gray-400 text-sm font-medium">Accede a tu cuenta inteligente.</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-6">
                     {isRegistering && !isAdminMode && (
                         <div className="animate-fade-in">
                             <Input 
@@ -232,7 +230,7 @@ export const Login: React.FC = () => {
                         <button 
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-4 top-[38px] text-gray-300 hover:text-primary transition-all p-1"
+                            className="absolute right-4 top-[38px] text-gray-300 hover:text-primary transition-all p-2"
                         >
                             {showPassword ? '👁️‍🗨️' : '👁️'}
                         </button>
@@ -243,7 +241,7 @@ export const Login: React.FC = () => {
                             type="submit" 
                             fullWidth 
                             isLoading={loading} 
-                            className={`py-4 text-sm font-black tracking-widest uppercase transition-all duration-300 rounded-2xl ${isAdminMode ? 'bg-slate-800 shadow-slate-900/10' : ''}`}
+                            className={`py-5 text-sm font-black tracking-widest uppercase transition-all duration-300 rounded-[1.8rem] ${isAdminMode ? 'bg-slate-800 shadow-slate-900/20' : 'shadow-primary/30'}`}
                         >
                             {isRegistering ? 'REGISTRARME' : 'ACCEDER'}
                         </Button>
@@ -251,17 +249,17 @@ export const Login: React.FC = () => {
                 </form>
 
                 {!isAdminMode && (
-                    <div className="mt-8 text-center space-y-5">
+                    <div className="mt-8 text-center space-y-6">
                         <button 
                             onClick={loginAnonymously}
-                            className="text-gray-400 hover:text-primary font-black text-[10px] uppercase tracking-[0.2em] transition-all"
+                            className="text-gray-400 hover:text-primary font-black text-[10px] uppercase tracking-[0.3em] transition-all"
                         >
-                            Ver menú como invitado
+                            Entrar como invitado
                         </button>
 
                         <div className="relative">
-                            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100"></div></div>
-                            <div className="relative flex justify-center text-[9px] font-black uppercase tracking-widest"><span className="px-3 bg-white/50 text-gray-300">O</span></div>
+                            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100/50"></div></div>
+                            <div className="relative flex justify-center text-[9px] font-black uppercase tracking-[0.3em]"><span className="px-3 bg-white/50 text-gray-300">Smart Connect</span></div>
                         </div>
 
                         <p className="text-xs text-gray-500 font-medium">
@@ -270,7 +268,7 @@ export const Login: React.FC = () => {
                                 onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
                                 className="ml-2 font-black text-primary hover:text-orange-600 transition-colors"
                             >
-                                {isRegistering ? 'Loguéate' : 'Crea una'}
+                                {isRegistering ? 'Acceder' : 'Crear una'}
                             </button>
                         </p>
                     </div>
@@ -282,12 +280,14 @@ export const Login: React.FC = () => {
       <style>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-6px); }
-          75% { transform: translateX(6px); }
+          20% { transform: translateX(-8px); }
+          40% { transform: translateX(8px); }
+          60% { transform: translateX(-8px); }
+          80% { transform: translateX(8px); }
         }
         @keyframes float {
           0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-30px) rotate(5deg); }
+          50% { transform: translateY(-40px) rotate(8deg); }
         }
         .animate-float {
           animation: float ease-in-out infinite;
