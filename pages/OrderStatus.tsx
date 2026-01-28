@@ -52,6 +52,7 @@ export const OrderStatusPage: React.FC = () => {
 
   const order = orders.find(o => o.id === id);
 
+  // Si aún estamos en el periodo de gracia y no hay orden, mostramos cargando
   if ((loading || searchTimeout) && !order) {
     return (
         <PageLayout className="flex items-center justify-center">
@@ -154,19 +155,11 @@ export const OrderStatusPage: React.FC = () => {
                 ) : (
                     <>
                         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-orange-400 to-primary animate-pulse" />
-                        
-                        {isReady && (
-                            <div className="mb-4 flex flex-col items-center animate-bounce-soft">
-                                <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-1">Caja Asignada</span>
-                                <span className="px-4 py-1.5 bg-orange-100 text-primary rounded-xl font-black text-lg shadow-sm border border-orange-200">CAJA #1</span>
-                            </div>
-                        )}
-
-                        <h2 className="text-gray-400 font-medium uppercase tracking-widest text-[10px] mb-2">Código de Retiro</h2>
-                        <div className={`text-7xl font-black transition-colors duration-300 tracking-widest font-mono mb-6 ${isCodeMatched ? 'text-green-500' : 'text-dark'}`}>
+                        <h2 className="text-gray-400 font-medium uppercase tracking-widest text-xs mb-4">Código de Retiro</h2>
+                        <div className={`text-7xl font-black transition-colors duration-300 tracking-widest font-mono mb-4 ${isCodeMatched ? 'text-green-500' : 'text-dark'}`}>
                             {isReady && isCodeMatched ? keyBuffer : order.code}
                         </div>
-                        <div className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${isCodeMatched ? 'bg-green-100 text-green-700' : isReady ? 'bg-orange-50 text-orange-600' : 'bg-gray-100 text-gray-500'}`}>
+                        <div className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isCodeMatched ? 'bg-green-100 text-green-700' : isReady ? 'bg-orange-50 text-orange-600' : 'bg-gray-100 text-gray-500'}`}>
                             {isCodeMatched ? "✅ CÓDIGO DETECTADO" : isReady ? "✨ Tu pedido te espera" : "⏳ Preparando..."}
                         </div>
                     </>
@@ -179,14 +172,9 @@ export const OrderStatusPage: React.FC = () => {
             )}
             {isReady && !isBoxBusyByOther && (
                 <div className="space-y-4 animate-fade-in pt-4">
-                    <div className="bg-blue-50 p-5 rounded-[2rem] border border-blue-100 flex items-center gap-4">
-                        <span className="text-3xl">💡</span>
-                        <p className="text-xs text-blue-800 font-medium leading-relaxed">
-                            Dirígete a la <span className="font-black text-blue-900">Caja #1</span> y retira tus productos de: <br/>
-                            <span className="font-bold text-dark inline-block mt-1">
-                                {hasHot ? '🔥 Módulo Caliente' : ''} {hasHot && hasCold ? 'y' : ''} {hasCold ? '❄️ Módulo Frío' : ''}
-                            </span>
-                        </p>
+                    <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 flex items-center gap-3">
+                        <span className="text-2xl">💡</span>
+                        <p className="text-xs text-blue-700 font-medium">Retira tus productos de: <span className="font-bold">{hasHot ? '🔥 Caliente' : ''} {hasHot && hasCold ? 'y' : ''} {hasCold ? '❄️ Fría' : ''}</span></p>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <TempCard label="Caliente" value={realTemps.hot} type="hot" />

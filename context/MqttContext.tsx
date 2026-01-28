@@ -65,19 +65,6 @@ export const MqttProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, [user]);
 
-  useEffect(() => {
-    if (!user) return;
-    const timer = setInterval(() => {
-        const now = Date.now();
-        ordersRef.current.forEach(order => {
-            if (order.status === 'pending' && (now - order.createdAt > 4000)) {
-                updateOrderStatus(order.id, 'ready');
-            }
-        });
-    }, 2000); 
-    return () => clearInterval(timer);
-  }, [user]); 
-
   const createOrder = async (order: Order) => {
     await database.updateBoxStatus(true, order.userId);
     await database.addOrder(order);

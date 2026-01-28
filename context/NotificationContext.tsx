@@ -11,36 +11,6 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-// Subcomponente para manejar el temporizador de cada notificación individual
-const ToastItem: React.FC<{ notification: AppNotification; onMarkAsRead: (id: string) => void }> = ({ notification, onMarkAsRead }) => {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onMarkAsRead(notification.id);
-    }, 3000); // 3 segundos exactos
-    return () => clearTimeout(timer);
-  }, [notification.id, onMarkAsRead]);
-
-  return (
-    <div 
-      className={`pointer-events-auto animate-slide-up p-4 rounded-2xl shadow-2xl backdrop-blur-xl border border-white/50 flex items-start gap-4 transform transition-all hover:scale-105 cursor-pointer ${
-        notification.type === 'critical' ? 'bg-red-500/90 text-white' : 
-        notification.type === 'offer' ? 'bg-amber-400/90 text-amber-950' : 
-        'bg-white/90 text-dark'
-      }`}
-      onClick={() => onMarkAsRead(notification.id)}
-    >
-      <div className="text-2xl">
-        {notification.type === 'critical' ? '🚨' : notification.type === 'offer' ? '✨' : '🔔'}
-      </div>
-      <div className="flex-1">
-        <h4 className="font-black text-xs uppercase tracking-widest opacity-80 mb-0.5">{notification.title}</h4>
-        <p className="text-sm font-bold leading-tight">{notification.body}</p>
-      </div>
-      <button className="opacity-50 hover:opacity-100">✕</button>
-    </div>
-  );
-};
-
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [permission, setPermission] = useState<NotificationPermission>('default');
@@ -64,6 +34,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
     setNotifications(prev => [newNotif, ...prev].slice(0, 50));
 
+    // Push Nativa si hay permiso
     if (permission === 'granted') {
       new Notification(newNotif.title, {
         body: newNotif.body,
@@ -84,8 +55,25 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       
       {/* Toast Overlay UI */}
       <div className="fixed bottom-24 right-6 z-[60] flex flex-col gap-3 pointer-events-none max-w-sm w-full">
-        {notifications.filter(n => !n.read).slice(0, 3).map((n) => (
-          <ToastItem key={n.id} notification={n} onMarkAsRead={markAsRead} />
+        {notifications.filter(n => !n.read).slice(0, 3).map((n, i) => (
+          <div 
+            key={n.id} 
+            className={`pointer-events-auto animate-slide-up p-4 rounded-2xl shadow-2xl backdrop-blur-xl border border-white/50 flex items-start gap-4 transform transition-all hover:scale-105 cursor-pointer ${
+              n.type === 'critical' ? 'bg-red-500/90 text-white' : 
+              n.type === 'offer' ? 'bg-amber-400/90 text-amber-950' : 
+              'bg-white/90 text-dark'
+            }`}
+            onClick={() => markAsRead(n.id)}
+          >
+            <div className="text-2xl">
+              {n.type === 'critical' ? '🚨' : n.type === 'offer' ? '✨' : '🔔'}
+            </div>
+            <div className="flex-1">
+              <h4 className="font-black text-xs uppercase tracking-widest opacity-80 mb-0.5">{n.title}</h4>
+              <p className="text-sm font-bold leading-tight">{n.body}</p>
+            </div>
+            <button className="opacity-50 hover:opacity-100">✕</button>
+          </div>
         ))}
       </div>
     </NotificationContext.Provider>

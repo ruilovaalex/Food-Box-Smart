@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useMqtt } from '../context/MqttContext';
 import { useAuth } from '../context/AuthContext';
@@ -7,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { database } from '../services/database';
 import { PRODUCTS } from '../constants';
 
-type TabView = 'dashboard' | 'inventory' | 'history' | 'sensors';
+type TabView = 'dashboard' | 'kitchen' | 'inventory' | 'history' | 'sensors';
 
 const StatCard: React.FC<{ title: string, value: string | number, sub: string, icon: string, colorClass: string }> = ({ title, value, sub, icon, colorClass }) => (
     <div className="relative overflow-hidden bg-white rounded-[2rem] p-6 shadow-lg border border-gray-100 transition-all duration-300">
@@ -22,16 +23,18 @@ const StatCard: React.FC<{ title: string, value: string | number, sub: string, i
 );
 
 export const AdminDashboard: React.FC = () => {
-    const { orders, realTemps, boxStatus, inventory, toggleProduct } = useMqtt();
+    const { orders, realTemps, boxStatus, inventory, toggleProduct, updateOrderStatus } = useMqtt();
     const { logout } = useAuth();
     const { addNotification } = useNotifications();
     const navigate = useNavigate();
     
-    const [currentTab, setCurrentTab] = useState<TabView>('dashboard');
+    const [currentTab, setCurrentTab] = useState<TabView>('kitchen');
     const [searchTerm, setSearchTerm] = useState('');
     const [isSimMode, setIsSimMode] = useState(false);
     
     const lastAlertTime = useRef({ hot: 0, cold: 0 });
+
+    const pendingOrders = useMemo(() => orders.filter(o => o.status === 'pending'), [orders]);
 
     const tempAlerts = useMemo(() => {
         const alerts: { msg: string; type: 'warning' | 'critical' }[] = [];
@@ -72,20 +75,29 @@ export const AdminDashboard: React.FC = () => {
         await database.updateSensors(newTemps.hot, newTemps.cold);
     };
 
+    const handleSendToBox = (orderId: string) => {
+        updateOrderStatus(orderId, 'ready');
+        addNotification({ 
+            title: "✅ PEDIDO EN CAJA", 
+            body: `La orden ${orderId} ha sido colocada en la Food Box.`, 
+            type: 'success' 
+        });
+    };
+
     return (
         <PageLayout className="bg-[#F3F4F6]">
             <div className="bg-dark text-white rounded-b-[4rem] pt-12 pb-20 px-8 shadow-2xl relative overflow-hidden mb-12">
                  <div className="absolute top-0 right-0 w-96 h-96 bg-primary opacity-10 rounded-full blur-3xl"></div>
                  <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8 max-w-7xl mx-auto">
                      <div className="flex items-center gap-6">
-                        <div className="w-20 h-20 bg-white/10 backdrop-blur-2xl rounded-3xl flex items-center justify-center border border-white/20 text-4xl shadow-2xl">⚡</div>
+                        <div className="w-20 h-20 bg-white/10 backdrop-blur-2xl rounded-3xl flex items-center justify-center border border-white/20 text-4xl shadow-2xl">👨‍🍳</div>
                         <div>
-                            <h2 className="text-primary font-black text-xs uppercase tracking-[0.3em] mb-1">Master Control</h2>
+                            <h2 className="text-primary font-black text-xs uppercase tracking-[0.3em] mb-1">Kitchen Console</h2>
                             <h1 className="text-4xl font-black tracking-tighter">Food Box Admin</h1>
                         </div>
                      </div>
                      <div className="flex items-center gap-4">
-                         <Button variant="secondary" onClick={() => { logout(); navigate('/'); }} className="!bg-white/5 !text-white border-white/10 hover:!bg-red-500/20 transition-all px-8">Logout</Button>
+                         <Button variant="secondary" onClick={() => { logout(); navigate('/'); }} className="!bg-white/5 !text-white border-white/10 hover:!bg-red-500/20 transition-all px-8">Cerrar Sesión</Button>
                      </div>
                  </div>
             </div>
@@ -93,16 +105,17 @@ export const AdminDashboard: React.FC = () => {
             <div className="max-w-7xl mx-auto px-6 -mt-20 relative z-20 mb-12">
                 <div className="bg-white/80 backdrop-blur-xl p-2 rounded-[2.5rem] shadow-2xl flex gap-2 overflow-x-auto no-scrollbar border border-white/50">
                     {[
-                        { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-                        { id: 'inventory', label: 'Inventario / Stock', icon: '📦' },
-                        { id: 'history', label: 'Ventas', icon: '📜' },
-                        { id: 'sensors', label: 'Sensores IoT', icon: '🌡️' },
+                        { id: 'kitchen', label: 'Cocina / Pedidos', icon: '🔥' },
+                        { id: 'dashboard', label: 'Estadísticas', icon: '📊' },
+                        { id: 'inventory', label: 'Inventario', icon: '📦' },
+                        { id: 'history', label: 'Historial', icon: '📜' },
+                        { id: 'sensors', label: 'Sensores', icon: '🌡️' },
                     ].map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setCurrentTab(tab.id as TabView)}
                             className={`flex items-center gap-3 px-10 py-5 rounded-[2rem] font-black text-sm transition-all whitespace-nowrap ${
-                                currentTab === tab.id ? 'bg-dark text-white shadow-2xl scale-105' : 'text-gray-400 hover:bg-white/50'
+                                currentTab === tab.id ? 'bg-primary text-white shadow-2xl scale-105' : 'text-gray-400 hover:bg-white/50'
                             }`}
                         >
                             <span>{tab.icon}</span> <span>{tab.label}</span>
@@ -112,10 +125,77 @@ export const AdminDashboard: React.FC = () => {
             </div>
 
             <div className="max-w-7xl mx-auto px-6 pb-24">
+                {currentTab === 'kitchen' && (
+                    <div className="animate-fade-in space-y-8">
+                        <div className="flex justify-between items-center px-4">
+                            <h3 className="text-2xl font-black text-dark tracking-tight">Pedidos por Preparar ({pendingOrders.length})</h3>
+                            <div className="flex items-center gap-3 bg-white px-6 py-3 rounded-2xl shadow-sm border border-gray-100">
+                                <div className={`w-3 h-3 rounded-full ${boxStatus.isOccupied ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
+                                <span className="text-xs font-black uppercase tracking-widest text-dark">
+                                    Caja: {boxStatus.isOccupied ? 'OCUPADA' : 'DISPONIBLE'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {pendingOrders.length === 0 ? (
+                            <div className="bg-white p-20 rounded-[3rem] text-center border-2 border-dashed border-gray-200">
+                                <span className="text-6xl mb-6 block">😴</span>
+                                <h4 className="text-xl font-black text-dark">Sin pedidos pendientes</h4>
+                                <p className="text-gray-400 mt-2">Todo está bajo control en la cocina.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {pendingOrders.map(order => (
+                                    <Card key={order.id} className="p-8 !rounded-[2.5rem] border-2 border-orange-50 flex flex-col h-full hover:border-primary transition-all">
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div>
+                                                <span className="text-[10px] font-black text-primary uppercase tracking-widest">Orden #{order.id.slice(-5)}</span>
+                                                <h4 className="text-lg font-black text-dark truncate max-w-[150px]">{order.customerDetails?.name || 'Cliente'}</h4>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-xs text-gray-400 font-bold block">{new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex-1 space-y-4 mb-8">
+                                            {order.items.map((item, idx) => (
+                                                <div key={idx} className="flex items-center gap-3 bg-gray-50 p-3 rounded-2xl border border-gray-100">
+                                                    <span className="text-lg">{item.type === 'hot' ? '🔥' : '❄️'}</span>
+                                                    <div className="flex-1">
+                                                        <p className="text-xs font-black text-dark">{item.quantity}x {item.name}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="pt-6 border-t border-gray-100 flex flex-col gap-4">
+                                            <div className="flex justify-between items-center px-2">
+                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ubicación Requerida</span>
+                                                <div className="flex gap-2">
+                                                    {order.items.some(i => i.type === 'hot') && <Badge type="hot" />}
+                                                    {order.items.some(i => i.type === 'cold') && <Badge type="cold" />}
+                                                </div>
+                                            </div>
+                                            <Button 
+                                                onClick={() => handleSendToBox(order.id)}
+                                                fullWidth
+                                                className="!py-4 bg-dark text-white hover:bg-primary shadow-xl"
+                                                icon="📦"
+                                            >
+                                                COLOCAR EN CAJA
+                                            </Button>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {currentTab === 'dashboard' && (
                     <div className="animate-fade-in grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                         <StatCard title="Ingresos" value={`$${stats.income.toFixed(2)}`} sub="Total ventas brutas" icon="💰" colorClass="from-green-400 to-emerald-600" />
-                        <StatCard title="Vendidos" value={stats.units} sub="Unidades totales" icon="📦" colorClass="from-blue-400 to-indigo-600" />
+                        <StatStatCard title="Vendidos" value={stats.units} sub="Unidades totales" icon="📦" colorClass="from-blue-400 to-indigo-600" />
                         <StatCard title="Box" value={boxStatus.isOccupied ? 'OCUPADO' : 'LIBRE'} sub="Estado actual" icon="🏢" colorClass="from-teal-400 to-cyan-600" />
                         <StatCard title="Alertas" value={tempAlerts.length} sub="Incidencias activas" icon="🚨" colorClass="from-red-400 to-orange-600" />
                     </div>
@@ -186,82 +266,6 @@ export const AdminDashboard: React.FC = () => {
                                             </tr>
                                         );
                                     })}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
-
-                {currentTab === 'history' && (
-                    <div className="animate-fade-in bg-white rounded-[3rem] shadow-xl border border-gray-100 overflow-hidden">
-                        <div className="p-10 border-b border-gray-50 flex justify-between items-center">
-                            <div>
-                                <h3 className="text-2xl font-black text-dark tracking-tight">Registro Maestro de Ventas</h3>
-                                <p className="text-gray-400 text-sm font-medium">Historial completo de pedidos realizados en la plataforma.</p>
-                            </div>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="bg-gray-50/50">
-                                    <tr>
-                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Pedido ID</th>
-                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Cliente / Fecha</th>
-                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Productos</th>
-                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Total</th>
-                                        <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {orders.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={5} className="px-10 py-20 text-center">
-                                                <p className="text-gray-400 font-bold uppercase tracking-widest">No hay ventas registradas aún</p>
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        orders.map(order => (
-                                            <tr key={order.id} className="hover:bg-gray-50/50 transition-colors group">
-                                                <td className="px-10 py-6">
-                                                    <span className="font-mono font-black text-dark text-sm">{order.id}</span>
-                                                </td>
-                                                <td className="px-10 py-6">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-bold text-dark uppercase text-xs">{order.customerDetails?.name || order.userEmail || 'Invitado'}</span>
-                                                        <span className="text-[10px] text-gray-400">{new Date(order.createdAt).toLocaleString()}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-10 py-6">
-                                                    <div className="flex -space-x-3 overflow-hidden">
-                                                        {order.items.slice(0, 3).map((item, i) => (
-                                                            <div key={i} className="inline-block h-8 w-8 rounded-full ring-2 ring-white overflow-hidden bg-gray-100">
-                                                                <img src={item.image} alt="" className="h-full w-full object-cover" />
-                                                            </div>
-                                                        ))}
-                                                        {order.items.length > 3 && (
-                                                            <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-[10px] font-black text-gray-400 ring-2 ring-white">
-                                                                +{order.items.length - 3}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-10 py-6">
-                                                    <span className="font-black text-primary text-lg tracking-tighter">${order.total.toFixed(2)}</span>
-                                                </td>
-                                                <td className="px-10 py-6 text-right">
-                                                    <Badge 
-                                                        type={order.status} 
-                                                        className={`${
-                                                            order.status === 'delivered' ? 'bg-green-50 text-green-600' : 
-                                                            order.status === 'ready' ? 'bg-blue-50 text-blue-600' : 
-                                                            'bg-orange-50 text-orange-600'
-                                                        }`}
-                                                    >
-                                                        {order.status}
-                                                    </Badge>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
                                 </tbody>
                             </table>
                         </div>
