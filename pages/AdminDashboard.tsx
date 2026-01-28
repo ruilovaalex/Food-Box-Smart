@@ -1,14 +1,14 @@
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useMqtt } from '../context/MqttContext';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import { Card, Button, PageLayout, Badge, Input, Alert } from '../components/UI';
+import { Card, Button, PageLayout, Badge } from '../components/UI';
 import { useNavigate } from 'react-router-dom';
 import { database } from '../services/database';
 import { PRODUCTS } from '../constants';
 
-type TabView = 'dashboard' | 'kitchen' | 'inventory' | 'history' | 'sensors';
+type TabView = 'dashboard' | 'kitchen' | 'inventory' | 'sensors';
 
 const StatCard: React.FC<{ title: string, value: string | number, sub: string, icon: string, colorClass: string }> = ({ title, value, sub, icon, colorClass }) => (
     <div className="relative overflow-hidden bg-white rounded-[2rem] p-6 shadow-lg border border-gray-100 transition-all duration-300">
@@ -61,13 +61,49 @@ export const AdminDashboard: React.FC = () => {
     const stats = useMemo(() => {
         let income = 0;
         let units = 0;
+        const salesByProduct: { [id: number]: { units: number, total: number, lastUser: string } } = {};
+        const dailySales: { [date: string]: number } = {};
+
+        // Inicializar últimos 7 días
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            dailySales[d.toLocaleDateString('es-ES', { weekday: 'short' })] = 0;
+        }
+
         orders.forEach(o => {
             if (o.status !== 'cancelled') {
                 income += (o.total || 0);
-                o.items?.forEach(i => units += i.quantity);
+                
+                // Daily sales logic
+                const dayLabel = new Date(o.createdAt).toLocaleDateString('es-ES', { weekday: 'short' });
+                if (dailySales[dayLabel] !== undefined) {
+                    dailySales[dayLabel] += o.total;
+                }
+
+                o.items?.forEach(i => {
+                    units += i.quantity;
+                    if (!salesByProduct[i.id]) salesByProduct[i.id] = { units: 0, total: 0, lastUser: 'Sin registros' };
+                    salesByProduct[i.id].units += i.quantity;
+                    salesByProduct[i.id].total += (i.price * i.quantity);
+                    salesByProduct[i.id].lastUser = o.customerDetails?.name || 'Cliente';
+                });
             }
         });
-        return { income, units };
+
+        const sortedPerformance = PRODUCTS
+            .map(p => ({
+                ...p,
+                ...(salesByProduct[p.id] || { units: 0, total: 0, lastUser: 'Sin ventas' })
+            }))
+            .sort((a, b) => b.units - a.units);
+
+        return { 
+            income, 
+            units, 
+            sortedPerformance,
+            dailySales: Object.entries(dailySales).map(([day, val]) => ({ day, val }))
+        };
     }, [orders]);
 
     const handleTempChange = async (type: 'hot' | 'cold', val: number) => {
@@ -108,7 +144,6 @@ export const AdminDashboard: React.FC = () => {
                         { id: 'kitchen', label: 'Cocina / Pedidos', icon: '🔥' },
                         { id: 'dashboard', label: 'Estadísticas', icon: '📊' },
                         { id: 'inventory', label: 'Inventario', icon: '📦' },
-                        { id: 'history', label: 'Historial', icon: '📜' },
                         { id: 'sensors', label: 'Sensores', icon: '🌡️' },
                     ].map(tab => (
                         <button
@@ -193,11 +228,100 @@ export const AdminDashboard: React.FC = () => {
                 )}
 
                 {currentTab === 'dashboard' && (
-                    <div className="animate-fade-in grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        <StatCard title="Ingresos" value={`$${stats.income.toFixed(2)}`} sub="Total ventas brutas" icon="💰" colorClass="from-green-400 to-emerald-600" />
-                        <StatStatCard title="Vendidos" value={stats.units} sub="Unidades totales" icon="📦" colorClass="from-blue-400 to-indigo-600" />
-                        <StatCard title="Box" value={boxStatus.isOccupied ? 'OCUPADO' : 'LIBRE'} sub="Estado actual" icon="🏢" colorClass="from-teal-400 to-cyan-600" />
-                        <StatCard title="Alertas" value={tempAlerts.length} sub="Incidencias activas" icon="🚨" colorClass="from-red-400 to-orange-600" />
+                    <div className="animate-fade-in space-y-10">
+                        {/* Key Stats Row */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                            <StatCard title="Ingresos" value={`$${stats.income.toFixed(2)}`} sub="Total ventas brutas" icon="💰" colorClass="from-green-400 to-emerald-600" />
+                            <StatCard title="Vendidos" value={stats.units} sub="Unidades totales" icon="📦" colorClass="from-blue-400 to-indigo-600" />
+                            <StatCard title="Box" value={boxStatus.isOccupied ? 'OCUPADO' : 'LIBRE'} sub="Estado actual" icon="🏢" colorClass="from-teal-400 to-cyan-600" />
+                            <StatCard title="Alertas" value={tempAlerts.length} sub="Incidencias activas" icon="🚨" colorClass="from-red-400 to-orange-600" />
+                        </div>
+
+                        {/* Chart Row */}
+                        <Card className="p-10 !rounded-[3rem] border border-gray-100">
+                            <div className="flex justify-between items-end mb-10">
+                                <div>
+                                    <h3 className="text-2xl font-black text-dark tracking-tighter italic uppercase">Ventas última semana</h3>
+                                    <p className="text-gray-400 font-medium text-sm">Rendimiento diario de ingresos (USD)</p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-xs font-black text-gray-300 uppercase tracking-widest">Promedio</span>
+                                    <p className="text-xl font-black text-primary">${(stats.income / 7).toFixed(2)}</p>
+                                </div>
+                            </div>
+                            
+                            <div className="h-64 flex items-end justify-between gap-4 px-4">
+                                {stats.dailySales.map((data, i) => {
+                                    const maxVal = Math.max(...stats.dailySales.map(d => d.val), 1);
+                                    const heightPercent = (data.val / maxVal) * 100;
+                                    return (
+                                        <div key={i} className="flex-1 flex flex-col items-center group relative">
+                                            {/* Tooltip on hover */}
+                                            <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-dark text-white text-[10px] font-bold px-2 py-1 rounded-lg pointer-events-none">
+                                                ${data.val.toFixed(2)}
+                                            </div>
+                                            {/* Bar */}
+                                            <div 
+                                                className="w-full bg-gradient-to-t from-primary/80 to-primary rounded-t-2xl transition-all duration-1000 shadow-lg shadow-orange-500/10 hover:brightness-110" 
+                                                style={{ height: `${heightPercent}%`, minHeight: data.val > 0 ? '8px' : '2px' }}
+                                            />
+                                            {/* Label */}
+                                            <span className="mt-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">{data.day}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </Card>
+
+                        {/* Units Sold Detail Row - Aggregated and Sorted by Units Sold */}
+                        <div className="bg-white rounded-[3rem] shadow-xl border border-gray-100 overflow-hidden">
+                            <div className="p-10 border-b border-gray-50">
+                                <h3 className="text-2xl font-black text-dark tracking-tight uppercase italic">Rendimiento por Producto</h3>
+                                <p className="text-gray-400 text-sm font-medium">Detallado por usuario, unidades vendidas e ingresos (Ordenado por unidades vendidas).</p>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead className="bg-gray-50/50">
+                                        <tr>
+                                            <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Producto</th>
+                                            <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Categoría</th>
+                                            <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Usuario</th>
+                                            <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Unidades</th>
+                                            <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">Total USD</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {stats.sortedPerformance.map(item => (
+                                            <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group">
+                                                <td className="px-10 py-6">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center font-black text-gray-400 overflow-hidden">
+                                                            <img src={item.image} alt="" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                                                        </div>
+                                                        <span className="font-bold text-dark text-lg group-hover:text-primary transition-colors">{item.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-10 py-6">
+                                                    <Badge type={item.type} />
+                                                </td>
+                                                <td className="px-10 py-6">
+                                                    <span className="text-xs font-bold text-gray-500 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">{item.lastUser}</span>
+                                                </td>
+                                                <td className="px-10 py-6">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`font-black text-xl ${item.units > 0 ? 'text-dark' : 'text-gray-200'}`}>{item.units}</span>
+                                                        {item.units > 5 && <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">Top</span>}
+                                                    </div>
+                                                </td>
+                                                <td className="px-10 py-6 text-right">
+                                                    <span className="font-black text-dark tracking-tighter text-lg">${item.total.toFixed(2)}</span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 )}
 

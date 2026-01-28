@@ -1,7 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Button, Input } from '../components/UI';
+
+const ASSETS = {
+    LOGO: '/images/logo.png',
+    SECURITY_GIF: '/images/calavera.gif',
+    FALLBACK_EMOJI: '🍔',
+    SECURITY_FALLBACK: '🛡️'
+};
 
 export const Login: React.FC = () => {
   const { login, register, loginAnonymously } = useAuth();
@@ -18,22 +24,13 @@ export const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Limpiar error cuando el usuario interactúa o cambia de modo
+  // Estados de error de carga de assets
+  const [logoError, setLogoError] = useState(false);
+  const [gifError, setGifError] = useState(false);
+
   useEffect(() => {
     setError('');
   }, [email, password, name, isAdminMode, isRegistering]);
-
-  // Limpiar error al salir de la página
-  useEffect(() => {
-    return () => setError('');
-  }, []);
-
-  // Rutas de archivos
-  const logoUrl = '/images/logo.png';
-  const gifUrl = '/images/calavera.gif';
-  
-  const [logoError, setLogoError] = useState(false);
-  const [gifError, setGifError] = useState(false);
 
   const [greeting, setGreeting] = useState('');
   useEffect(() => {
@@ -93,21 +90,19 @@ export const Login: React.FC = () => {
         
         {/* PANEL IZQUIERDO: Visual & Branding */}
         <div className={`md:w-[45%] p-10 lg:p-16 flex flex-col items-center justify-center relative overflow-hidden text-center transition-all duration-700 ${isAdminMode ? 'bg-slate-900' : 'bg-primary'}`}>
-             
-             {/* Círculos decorativos de fondo */}
              <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl"></div>
              <div className="absolute bottom-0 right-0 w-80 h-80 bg-black/10 rounded-full translate-x-1/3 translate-y-1/3 blur-3xl"></div>
              
              <div className="relative z-10 mb-10 group">
                 {!logoError ? (
                     <img 
-                        src={logoUrl}
+                        src={ASSETS.LOGO}
                         alt="Logo Food Box" 
                         className="w-44 h-44 md:w-64 md:h-64 object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.4)] transition-all duration-500 group-hover:scale-110 group-hover:rotate-3" 
                         onError={() => setLogoError(true)}
                     />
                 ) : (
-                    <div className="text-9xl animate-bounce-soft">🍔</div>
+                    <div className="text-9xl animate-bounce-soft">{ASSETS.FALLBACK_EMOJI}</div>
                 )}
              </div>
              
@@ -119,23 +114,23 @@ export const Login: React.FC = () => {
                 </p>
              </div>
 
-             {/* GIF Animado (Calavera) mejor posicionado */}
-             {!gifError && (
-                <div className="absolute bottom-8 left-8 z-20 transition-opacity duration-500 opacity-40 hover:opacity-100 group">
+             {/* GIF Animado de Seguridad con Fallback */}
+             <div className="absolute bottom-8 left-8 z-20 transition-opacity duration-500 opacity-40 hover:opacity-100">
+                {!gifError ? (
                     <img 
-                        src={gifUrl}
+                        src={ASSETS.SECURITY_GIF}
                         alt="Security" 
                         className="w-12 h-12 md:w-16 md:h-16 object-contain mix-blend-screen grayscale brightness-200"
                         onError={() => setGifError(true)}
                     />
-                </div>
-             )}
+                ) : (
+                    <div className="text-2xl opacity-50 grayscale">{ASSETS.SECURITY_FALLBACK}</div>
+                )}
+             </div>
         </div>
 
-        {/* PANEL DERECHO: Formulario Interactivos */}
+        {/* PANEL DERECHO: Formulario */}
         <div className="md:w-[55%] p-8 lg:p-20 flex flex-col justify-center bg-white/40 relative">
-            
-            {/* Selector de Modo con Estilo */}
             <div className="absolute top-10 right-10 flex bg-gray-100/50 backdrop-blur-md p-1.5 rounded-2xl border border-gray-200/50 z-30">
                 <button 
                     onClick={() => { setIsAdminMode(false); setError(''); }}
@@ -246,7 +241,6 @@ export const Login: React.FC = () => {
         </div>
       </div>
       
-      {/* Estilo para la animación de vibración de error */}
       <style>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
