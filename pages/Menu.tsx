@@ -20,6 +20,9 @@ export const Menu: React.FC = () => {
   const [showNotifCenter, setShowNotifCenter] = useState(false);
   const offerTriggered = useRef(false);
 
+  // Obtener máximo 3 productos en oferta para la sección especial
+  const promoProducts = PRODUCTS.filter(p => p.onSale).slice(0, 3);
+
   useEffect(() => {
     const savedFavs = localStorage.getItem(`favs_${user?.id}`);
     if (savedFavs) {
@@ -64,8 +67,6 @@ export const Menu: React.FC = () => {
     if (filter === 'favs') return favorites.includes(p.id);
     return p.type === filter;
   });
-
-  const offerNotifications = notifications.filter(n => n.type === 'offer');
 
   const handleAddToCart = (product: Product) => {
       if (!isAvailable(product.id)) return;
@@ -118,8 +119,8 @@ export const Menu: React.FC = () => {
         </div>
       )}
 
-      {/* Hero Header Section */}
-      <div className="relative bg-dark pt-12 pb-24 px-8 rounded-b-[4.5rem] shadow-2xl shadow-dark/10 mb-10 overflow-hidden">
+      {/* Hero Header Section - Rectangular with Increased Shadow */}
+      <div className="relative bg-[#1A1F2B] pt-12 pb-32 px-8 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.4)] mb-10 overflow-hidden">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary opacity-10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent opacity-5 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2"></div>
         
@@ -138,7 +139,7 @@ export const Menu: React.FC = () => {
                  >
                     🔔
                     {unreadCount > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-primary border-4 border-dark rounded-full text-[10px] font-black flex items-center justify-center animate-bounce shadow-lg">
+                        <span className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-primary border-4 border-[#1A1F2B] rounded-full text-[10px] font-black flex items-center justify-center animate-bounce shadow-lg">
                             {unreadCount}
                         </span>
                     )}
@@ -154,9 +155,9 @@ export const Menu: React.FC = () => {
         </div>
       </div>
 
-      {/* Category Pills */}
-      <div className="px-6 -mt-16 mb-12 relative z-20 flex justify-center">
-         <div className="bg-white/90 backdrop-blur-2xl p-2.5 rounded-[2.5rem] shadow-2xl shadow-dark/5 flex gap-2 overflow-x-auto no-scrollbar border border-white">
+      {/* Category Pills - Enhanced Shadows and Relief */}
+      <div className="px-6 -mt-24 mb-16 relative z-20 flex justify-center">
+         <div className="bg-white p-2.5 rounded-[3rem] shadow-[0_40px_90px_-10px_rgba(0,0,0,0.25)] flex gap-2 overflow-x-auto no-scrollbar border border-white/80 ring-1 ring-black/5">
             {[
               { id: 'all', label: 'Todo', icon: '🍽️' }, 
               { id: 'favs', label: 'Favoritos', icon: '❤️' },
@@ -166,10 +167,10 @@ export const Menu: React.FC = () => {
                 <button
                     key={cat.id}
                     onClick={() => setFilter(cat.id as any)}
-                    className={`flex items-center gap-3 px-8 py-4 rounded-[1.8rem] text-[11px] font-black uppercase tracking-[0.15em] transition-all duration-500 whitespace-nowrap ${
+                    className={`flex items-center gap-3 px-8 py-4 rounded-[2.2rem] text-[11px] font-black uppercase tracking-[0.15em] transition-all duration-500 whitespace-nowrap ${
                         filter === cat.id 
-                        ? 'bg-dark text-white shadow-[0_15px_30px_-5px_rgba(0,0,0,0.3)] scale-105 ring-4 ring-dark/5' 
-                        : 'text-gray-400 hover:bg-gray-100/50 hover:text-dark'
+                        ? 'bg-[#1A1F2B] text-white shadow-[0_20px_45px_-5px_rgba(0,0,0,0.6)] scale-105' 
+                        : 'text-gray-400 hover:bg-gray-100/80 hover:text-dark'
                     }`}
                 >
                     <span className={`text-base transition-transform duration-500 ${filter === cat.id ? 'scale-125 rotate-12' : 'grayscale opacity-60'}`}>{cat.icon}</span> 
@@ -182,17 +183,26 @@ export const Menu: React.FC = () => {
       {/* Product Grid */}
       <div className="px-8 pb-48 max-w-7xl mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
-              {/* Premium Offer Cards */}
-              {filter === 'all' && offerNotifications.map(notif => (
-                  <Card key={notif.id} className="!rounded-[3rem] bg-gradient-to-br from-amber-400 to-orange-600 p-1 flex flex-col h-full shadow-[0_30px_60px_-15px_rgba(255,138,43,0.3)] animate-fade-in group overflow-hidden border-0">
-                      <div className="absolute top-0 right-0 p-12 opacity-10 text-[10rem] font-black italic select-none -translate-y-8 translate-x-8">!</div>
-                      <div className="flex-1 bg-white rounded-[2.8rem] p-10 flex flex-col items-center justify-center text-center relative z-10 transition-transform duration-500 group-hover:scale-[0.98]">
-                          <div className="w-20 h-20 bg-amber-50 rounded-[2rem] flex items-center justify-center text-4xl mb-6 animate-bounce-soft shadow-inner border border-amber-100">✨</div>
-                          <h3 className="text-2xl font-black text-dark uppercase italic tracking-tighter mb-3 leading-tight">{notif.title}</h3>
-                          <p className="text-gray-500 text-[13px] font-bold leading-relaxed mb-8 max-w-[200px]">{notif.body}</p>
-                          <Button onClick={() => markAsRead(notif.id)} variant="primary" className="!rounded-[1.5rem] !py-4 px-10 shadow-2xl shadow-orange-500/40 font-black tracking-widest uppercase text-xs">
-                              LO QUIERO
-                          </Button>
+              
+              {/* Premium Offer Cards - Updated to show EXACTLY 3 with real images and Heavy Shadow */}
+              {filter === 'all' && promoProducts.map((product, idx) => (
+                  <Card key={`offer-${product.id}`} className="!rounded-[3rem] bg-gradient-to-br from-amber-400 to-orange-600 p-1 flex flex-col h-full shadow-[0_45px_100px_-15px_rgba(255,138,43,0.5)] animate-fade-in group overflow-hidden border-0 relative">
+                      <div className="absolute top-4 right-8 z-20 bg-dark text-white text-[9px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-xl animate-pulse">FLASH SALE</div>
+                      <div className="flex-1 bg-white rounded-[2.8rem] overflow-hidden flex flex-col relative z-10 transition-transform duration-500 group-hover:scale-[0.99]">
+                          <div className="relative h-48 overflow-hidden">
+                              <img src={product.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={product.name} />
+                              <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent"></div>
+                          </div>
+                          <div className="p-8 pt-2 flex flex-col items-center justify-center text-center">
+                              <h3 className="text-xl font-black text-dark uppercase italic tracking-tighter mb-2 leading-tight">{product.name}</h3>
+                              <div className="flex items-center gap-3 mb-6">
+                                  <span className="text-gray-300 line-through text-xs font-bold">${product.originalPrice?.toFixed(2)}</span>
+                                  <span className="text-2xl font-black text-primary">${product.price.toFixed(2)}</span>
+                              </div>
+                              <Button onClick={() => handleAddToCart(product)} variant="primary" className="!rounded-[1.5rem] !py-3 px-10 shadow-xl shadow-orange-500/30 font-black tracking-widest uppercase text-[10px] w-full">
+                                  APROVECHAR OFERTA
+                              </Button>
+                          </div>
                       </div>
                   </Card>
               ))}
@@ -203,7 +213,7 @@ export const Menu: React.FC = () => {
                   return (
                   <Card 
                     key={product.id} 
-                    className={`flex flex-col h-full group !rounded-[3rem] border-0 shadow-[0_25px_60px_-20px_rgba(0,0,0,0.06)] overflow-hidden bg-white transition-all duration-500 hover:shadow-2xl hover:shadow-dark/5 hover:-translate-y-2 animate-slide-up ${!available ? 'opacity-60 grayscale-[0.5]' : ''}`}
+                    className={`flex flex-col h-full group !rounded-[3rem] border-0 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)] overflow-hidden bg-white transition-all duration-500 hover:shadow-[0_60px_120px_-20px_rgba(0,0,0,0.25)] hover:-translate-y-2 animate-slide-up ${!available ? 'opacity-60 grayscale-[0.5]' : ''}`}
                     style={{ animationDelay: `${idx * 100}ms` }}
                   >
                       <div className="relative h-80 w-full overflow-hidden">
@@ -215,7 +225,7 @@ export const Menu: React.FC = () => {
                           
                           {/* Modern Offer Badge */}
                           {product.onSale && (
-                              <div className="absolute top-8 left-8 z-40 bg-white/20 backdrop-blur-xl px-5 py-2.5 rounded-2xl border border-white/30 shadow-2xl">
+                              <div className="absolute top-8 left-8 z-40 bg-white/30 backdrop-blur-xl px-5 py-2.5 rounded-2xl border border-white/40 shadow-2xl">
                                   <span className="text-white font-black text-[10px] uppercase tracking-[0.3em] drop-shadow-md">{product.saleText}</span>
                               </div>
                           )}
@@ -276,16 +286,16 @@ export const Menu: React.FC = () => {
           </div>
       </div>
       
-      {/* Premium Floating Cart Bar */}
+      {/* Premium Floating Cart Bar - Heavier Shadow for Depth */}
       {items.length > 0 && (
         <div className="fixed bottom-10 left-6 right-6 z-[60] max-w-xl mx-auto animate-slide-up">
            <div 
              onClick={() => navigate('/cart')} 
-             className="bg-dark/90 backdrop-blur-3xl text-white rounded-[3rem] p-6 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.5)] flex items-center justify-between cursor-pointer border border-white/10 group active:scale-95 hover:bg-dark transition-all duration-500"
+             className="bg-dark/90 backdrop-blur-3xl text-white rounded-[3rem] p-6 shadow-[0_50px_150px_-20px_rgba(0,0,0,0.7)] flex items-center justify-between cursor-pointer border border-white/10 group active:scale-95 hover:bg-dark transition-all duration-500"
            >
              <div className="flex items-center gap-6">
                <div className="relative">
-                   <div className="bg-primary text-white w-16 h-16 rounded-[1.8rem] flex items-center justify-center font-black text-2xl shadow-[0_10px_30px_-5px_rgba(255,138,43,0.5)] group-hover:scale-110 transition-transform duration-500">
+                   <div className="bg-primary text-white w-16 h-16 rounded-[1.8rem] flex items-center justify-center font-black text-2xl shadow-[0_15px_40px_-5px_rgba(255,138,43,0.6)] group-hover:scale-110 transition-transform duration-500">
                      {items.reduce((acc, i) => acc + i.quantity, 0)}
                    </div>
                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-accent rounded-full border-4 border-dark animate-pulse"></div>
