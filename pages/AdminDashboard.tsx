@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { database } from '../services/database';
 import { PRODUCTS } from '../constants';
 
-type TabView = 'dashboard' | 'kitchen' | 'history' | 'inventory' | 'sensors' | 'finances';
+type TabView = 'dashboard' | 'kitchen' | 'history' | 'inventory' | 'sensors';
 
 const StatCard: React.FC<{ title: string, value: string | number, sub: string, icon: string, colorClass: string }> = ({ title, value, sub, icon, colorClass }) => (
     <div className="relative overflow-hidden bg-white rounded-[2rem] p-6 shadow-lg border border-gray-100 transition-all duration-300">
@@ -30,21 +30,9 @@ export const AdminDashboard: React.FC = () => {
     
     const [currentTab, setCurrentTab] = useState<TabView>('kitchen');
     const [searchTerm, setSearchTerm] = useState('');
-    const [isSimMode, setIsSimMode] = useState(false);
-    const [profitMargin, setProfitMargin] = useState(30);
     
     const pendingOrders = useMemo(() => orders.filter(o => o.status === 'pending'), [orders]);
     const allOrdersSorted = useMemo(() => [...orders].sort((a, b) => b.createdAt - a.createdAt), [orders]);
-
-    const COSTS = {
-        HUMAN_CAPITAL: 36.00,
-        MATERIALS: 120.00,
-        TOTAL_PRODUCTION: 156.00
-    };
-
-    const sellingPrice = useMemo(() => {
-        return COSTS.TOTAL_PRODUCTION / (1 - (profitMargin / 100));
-    }, [profitMargin]);
 
     const tempAlerts = useMemo(() => {
         const alerts: { msg: string; type: 'warning' | 'critical' }[] = [];
@@ -143,7 +131,6 @@ export const AdminDashboard: React.FC = () => {
                         { id: 'dashboard', label: 'Reportes', icon: '📊' },
                         { id: 'inventory', label: 'Stock', icon: '📦' },
                         { id: 'sensors', label: 'Sensores', icon: '🌡️' },
-                        { id: 'finances', label: 'Finanzas', icon: '💰' },
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -317,82 +304,6 @@ export const AdminDashboard: React.FC = () => {
                                 })}
                             </div>
                         </Card>
-                    </div>
-                )}
-
-                {currentTab === 'finances' && (
-                    <div className="animate-fade-in space-y-10">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <Card className="p-10 !rounded-[3rem] border border-gray-100 shadow-xl bg-white">
-                                <h3 className="text-2xl font-black text-dark tracking-tight uppercase italic mb-8">Estructura de Costos (Prototipo)</h3>
-                                <div className="space-y-6">
-                                    <div className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-2xl">👥</span>
-                                            <div>
-                                                <p className="font-black text-dark text-sm uppercase">Capital Humano</p>
-                                                <p className="text-[10px] text-gray-400 font-bold">12h Desarrollo @ $3/h</p>
-                                            </div>
-                                        </div>
-                                        <span className="font-black text-xl text-dark font-mono">${COSTS.HUMAN_CAPITAL.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-2xl">🔌</span>
-                                            <div>
-                                                <p className="font-black text-dark text-sm uppercase">Materiales y Hardware</p>
-                                                <p className="text-[10px] text-gray-400 font-bold">Sensores, ESP32, Estructura</p>
-                                            </div>
-                                        </div>
-                                        <span className="font-black text-xl text-dark font-mono">${COSTS.MATERIALS.toFixed(2)}</span>
-                                    </div>
-                                    <div className="pt-6 border-t-2 border-dashed border-gray-100 flex justify-between items-end">
-                                        <p className="font-black text-dark text-lg uppercase tracking-tighter">Costo Producción Unitario</p>
-                                        <p className="text-4xl font-black text-primary font-mono tracking-tighter">${COSTS.TOTAL_PRODUCTION.toFixed(2)}</p>
-                                    </div>
-                                </div>
-                            </Card>
-
-                            <Card className="p-10 !rounded-[3rem] border border-gray-100 shadow-xl bg-dark text-white relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-                                <h3 className="text-2xl font-black text-white tracking-tight uppercase italic mb-8 relative z-10">Calculadora de Precio</h3>
-                                
-                                <div className="space-y-10 relative z-10">
-                                    <div>
-                                        <div className="flex justify-between items-end mb-4">
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Margen de Ganancia Deseado</p>
-                                            <span className="text-3xl font-black text-primary">{profitMargin}%</span>
-                                        </div>
-                                        <input 
-                                            type="range" 
-                                            min="10" 
-                                            max="80" 
-                                            value={profitMargin} 
-                                            onChange={(e) => setProfitMargin(parseInt(e.target.value))}
-                                            className="w-full h-3 bg-white/10 rounded-full appearance-none cursor-pointer accent-primary" 
-                                        />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div className="p-6 bg-white/5 rounded-3xl border border-white/10">
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Precio de Venta</p>
-                                            <p className="text-3xl font-black text-white font-mono tracking-tighter">${sellingPrice.toFixed(2)}</p>
-                                        </div>
-                                        <div className="p-6 bg-white/5 rounded-3xl border border-white/10">
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Utilidad Neta</p>
-                                            <p className="text-3xl font-black text-green-400 font-mono tracking-tighter">${(sellingPrice - COSTS.TOTAL_PRODUCTION).toFixed(2)}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="p-6 bg-primary/10 rounded-[2rem] border border-primary/20">
-                                        <p className="text-xs text-primary font-bold leading-relaxed">
-                                            💡 Este cálculo utiliza la fórmula de Margen sobre Venta: <br/>
-                                            <span className="font-mono text-[10px]">Precio = Costo / (1 - Margen%)</span>
-                                        </p>
-                                    </div>
-                                </div>
-                            </Card>
-                        </div>
                     </div>
                 )}
 
