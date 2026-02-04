@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { database } from '../services/database';
 import { PRODUCTS } from '../constants';
 
-type TabView = 'dashboard' | 'kitchen' | 'history' | 'inventory' | 'sensors';
+type TabView = 'dashboard' | 'kitchen' | 'history' | 'inventory' | 'sensors' | 'finances';
 
 const StatCard: React.FC<{ title: string, value: string | number, sub: string, icon: string, colorClass: string }> = ({ title, value, sub, icon, colorClass }) => (
     <div className="relative overflow-hidden bg-white rounded-[2rem] p-6 shadow-lg border border-gray-100 transition-all duration-300">
@@ -31,9 +31,20 @@ export const AdminDashboard: React.FC = () => {
     const [currentTab, setCurrentTab] = useState<TabView>('kitchen');
     const [searchTerm, setSearchTerm] = useState('');
     const [isSimMode, setIsSimMode] = useState(false);
+    const [profitMargin, setProfitMargin] = useState(30);
     
     const pendingOrders = useMemo(() => orders.filter(o => o.status === 'pending'), [orders]);
     const allOrdersSorted = useMemo(() => [...orders].sort((a, b) => b.createdAt - a.createdAt), [orders]);
+
+    const COSTS = {
+        HUMAN_CAPITAL: 36.00,
+        MATERIALS: 120.00,
+        TOTAL_PRODUCTION: 156.00
+    };
+
+    const sellingPrice = useMemo(() => {
+        return COSTS.TOTAL_PRODUCTION / (1 - (profitMargin / 100));
+    }, [profitMargin]);
 
     const tempAlerts = useMemo(() => {
         const alerts: { msg: string; type: 'warning' | 'critical' }[] = [];
@@ -52,7 +63,6 @@ export const AdminDashboard: React.FC = () => {
         const salesByProduct: { [id: number]: { units: number, total: number, lastUser: string } } = {};
         const dailySales: { [date: string]: number } = {};
 
-        // Inicializar últimos 7 días
         for (let i = 6; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
@@ -133,6 +143,7 @@ export const AdminDashboard: React.FC = () => {
                         { id: 'dashboard', label: 'Reportes', icon: '📊' },
                         { id: 'inventory', label: 'Stock', icon: '📦' },
                         { id: 'sensors', label: 'Sensores', icon: '🌡️' },
+                        { id: 'finances', label: 'Finanzas', icon: '💰' },
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -232,28 +243,34 @@ export const AdminDashboard: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
-                                    {allOrdersSorted.map(order => (
-                                        <tr key={order.id} className="hover:bg-gray-50/50 transition-colors group">
-                                            <td className="px-10 py-6">
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold text-dark">{new Date(order.createdAt).toLocaleDateString()}</span>
-                                                    <span className="text-[10px] text-gray-400 font-bold">{new Date(order.createdAt).toLocaleTimeString()}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-10 py-6">
-                                                <span className="font-black text-dark text-sm uppercase tracking-tight">{order.customerDetails?.name || 'Invitado'}</span>
-                                            </td>
-                                            <td className="px-10 py-6">
-                                                <span className="text-xs font-mono font-bold text-gray-400 group-hover:text-primary transition-colors">#{order.id}</span>
-                                            </td>
-                                            <td className="px-10 py-6">
-                                                <Badge type={order.status} className="!text-[9px]" />
-                                            </td>
-                                            <td className="px-10 py-6 text-right">
-                                                <span className="font-black text-dark tracking-tighter text-lg">${order.total.toFixed(2)}</span>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {allOrdersSorted.map(order => {
+                                        const isCompleted = order.status === 'delivered' || order.status === 'ready';
+                                        return (
+                                            <tr key={order.id} className="hover:bg-gray-50/50 transition-colors group">
+                                                <td className="px-10 py-6">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold text-dark">{new Date(order.createdAt).toLocaleDateString()}</span>
+                                                        <span className="text-[10px] text-gray-400 font-bold">{new Date(order.createdAt).toLocaleTimeString()}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-10 py-6">
+                                                    <span className="font-black text-dark text-sm uppercase tracking-tight">{order.customerDetails?.name || 'Invitado'}</span>
+                                                </td>
+                                                <td className="px-10 py-6">
+                                                    <span className="text-xs font-mono font-bold text-gray-400 group-hover:text-primary transition-colors">#{order.id}</span>
+                                                </td>
+                                                <td className="px-10 py-6">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-2.5 h-2.5 rounded-full shadow-sm transition-all duration-500 ${isCompleted ? 'bg-green-500 shadow-green-500/20' : 'bg-red-500 shadow-red-500/20 animate-pulse'}`}></div>
+                                                        <Badge type={order.status} className="!text-[9px]" />
+                                                    </div>
+                                                </td>
+                                                <td className="px-10 py-6 text-right">
+                                                    <span className="font-black text-dark tracking-tighter text-lg">${order.total.toFixed(2)}</span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -300,54 +317,81 @@ export const AdminDashboard: React.FC = () => {
                                 })}
                             </div>
                         </Card>
+                    </div>
+                )}
 
-                        <div className="bg-white rounded-[3rem] shadow-xl border border-gray-100 overflow-hidden">
-                            <div className="p-10 border-b border-gray-50">
-                                <h3 className="text-2xl font-black text-dark tracking-tight uppercase italic">Rendimiento por Producto</h3>
-                                <p className="text-gray-400 text-sm font-medium">Detallado por usuario, unidades vendidas e ingresos (Ordenado por unidades vendidas).</p>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead className="bg-gray-50/50">
-                                        <tr>
-                                            <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Producto</th>
-                                            <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Categoría</th>
-                                            <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Usuario</th>
-                                            <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Unidades</th>
-                                            <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">Total USD</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {stats.sortedPerformance.map(item => (
-                                            <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group">
-                                                <td className="px-10 py-6">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center font-black text-gray-400 overflow-hidden">
-                                                            <img src={item.image} alt="" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
-                                                        </div>
-                                                        <span className="font-bold text-dark text-lg group-hover:text-primary transition-colors">{item.name}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-10 py-6">
-                                                    <Badge type={item.type} />
-                                                </td>
-                                                <td className="px-10 py-6">
-                                                    <span className="text-xs font-bold text-gray-500 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">{item.lastUser}</span>
-                                                </td>
-                                                <td className="px-10 py-6">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`font-black text-xl ${item.units > 0 ? 'text-dark' : 'text-gray-200'}`}>{item.units}</span>
-                                                        {item.units > 5 && <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">Top</span>}
-                                                    </div>
-                                                </td>
-                                                <td className="px-10 py-6 text-right">
-                                                    <span className="font-black text-dark tracking-tighter text-lg">${item.total.toFixed(2)}</span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                {currentTab === 'finances' && (
+                    <div className="animate-fade-in space-y-10">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <Card className="p-10 !rounded-[3rem] border border-gray-100 shadow-xl bg-white">
+                                <h3 className="text-2xl font-black text-dark tracking-tight uppercase italic mb-8">Estructura de Costos (Prototipo)</h3>
+                                <div className="space-y-6">
+                                    <div className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-2xl">👥</span>
+                                            <div>
+                                                <p className="font-black text-dark text-sm uppercase">Capital Humano</p>
+                                                <p className="text-[10px] text-gray-400 font-bold">12h Desarrollo @ $3/h</p>
+                                            </div>
+                                        </div>
+                                        <span className="font-black text-xl text-dark font-mono">${COSTS.HUMAN_CAPITAL.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-2xl">🔌</span>
+                                            <div>
+                                                <p className="font-black text-dark text-sm uppercase">Materiales y Hardware</p>
+                                                <p className="text-[10px] text-gray-400 font-bold">Sensores, ESP32, Estructura</p>
+                                            </div>
+                                        </div>
+                                        <span className="font-black text-xl text-dark font-mono">${COSTS.MATERIALS.toFixed(2)}</span>
+                                    </div>
+                                    <div className="pt-6 border-t-2 border-dashed border-gray-100 flex justify-between items-end">
+                                        <p className="font-black text-dark text-lg uppercase tracking-tighter">Costo Producción Unitario</p>
+                                        <p className="text-4xl font-black text-primary font-mono tracking-tighter">${COSTS.TOTAL_PRODUCTION.toFixed(2)}</p>
+                                    </div>
+                                </div>
+                            </Card>
+
+                            <Card className="p-10 !rounded-[3rem] border border-gray-100 shadow-xl bg-dark text-white relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                                <h3 className="text-2xl font-black text-white tracking-tight uppercase italic mb-8 relative z-10">Calculadora de Precio</h3>
+                                
+                                <div className="space-y-10 relative z-10">
+                                    <div>
+                                        <div className="flex justify-between items-end mb-4">
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Margen de Ganancia Deseado</p>
+                                            <span className="text-3xl font-black text-primary">{profitMargin}%</span>
+                                        </div>
+                                        <input 
+                                            type="range" 
+                                            min="10" 
+                                            max="80" 
+                                            value={profitMargin} 
+                                            onChange={(e) => setProfitMargin(parseInt(e.target.value))}
+                                            className="w-full h-3 bg-white/10 rounded-full appearance-none cursor-pointer accent-primary" 
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div className="p-6 bg-white/5 rounded-3xl border border-white/10">
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Precio de Venta</p>
+                                            <p className="text-3xl font-black text-white font-mono tracking-tighter">${sellingPrice.toFixed(2)}</p>
+                                        </div>
+                                        <div className="p-6 bg-white/5 rounded-3xl border border-white/10">
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Utilidad Neta</p>
+                                            <p className="text-3xl font-black text-green-400 font-mono tracking-tighter">${(sellingPrice - COSTS.TOTAL_PRODUCTION).toFixed(2)}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 bg-primary/10 rounded-[2rem] border border-primary/20">
+                                        <p className="text-xs text-primary font-bold leading-relaxed">
+                                            💡 Este cálculo utiliza la fórmula de Margen sobre Venta: <br/>
+                                            <span className="font-mono text-[10px]">Precio = Costo / (1 - Margen%)</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </Card>
                         </div>
                     </div>
                 )}
@@ -451,37 +495,6 @@ export const AdminDashboard: React.FC = () => {
                                      <span className="px-6 py-2 rounded-full bg-white shadow-sm border border-gray-100 text-[10px] font-black uppercase text-gray-400">Objetivo: 4°C</span>
                                 </div>
                             </Card>
-                        </div>
-
-                        <div className="bg-white rounded-[3.5rem] p-12 shadow-2xl border border-gray-100 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-10 opacity-[0.03] text-9xl font-black italic">IOT</div>
-                            <div className="flex items-center justify-between mb-12 relative z-10">
-                                <div>
-                                    <h3 className="text-2xl font-black text-dark tracking-tighter italic uppercase">Simulador de Emergencia</h3>
-                                    <p className="text-gray-400 font-medium text-sm">Ajusta los sensores para disparar protocolos de seguridad.</p>
-                                </div>
-                                <button onClick={() => setIsSimMode(!isSimMode)} className={`w-20 h-10 rounded-full transition-all flex items-center px-1.5 ${isSimMode ? 'bg-primary shadow-xl shadow-orange-500/40' : 'bg-gray-200'}`}>
-                                    <div className={`w-7 h-7 bg-white rounded-full shadow-md transition-all ${isSimMode ? 'translate-x-10' : ''}`}></div>
-                                </button>
-                            </div>
-                            {isSimMode && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-20 animate-slide-up relative z-10">
-                                    <div className="space-y-6">
-                                        <div className="flex justify-between items-end">
-                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Simular Calor</p>
-                                            <span className="text-2xl font-black text-orange-600">{realTemps.hot}°C</span>
-                                        </div>
-                                        <input type="range" min="30" max="95" value={realTemps.hot} onChange={(e) => handleTempChange('hot', parseInt(e.target.value))} className="w-full h-3 bg-orange-100 rounded-full appearance-none cursor-pointer accent-orange-600" />
-                                    </div>
-                                    <div className="space-y-6">
-                                        <div className="flex justify-between items-end">
-                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Simular Frío</p>
-                                            <span className="text-2xl font-black text-teal-600">{realTemps.cold}°C</span>
-                                        </div>
-                                        <input type="range" min="-10" max="25" value={realTemps.cold} onChange={(e) => handleTempChange('cold', parseInt(e.target.value))} className="w-full h-3 bg-teal-100 rounded-full appearance-none cursor-pointer accent-teal-600" />
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </div>
                 )}
