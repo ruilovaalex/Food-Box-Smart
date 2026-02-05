@@ -34,8 +34,7 @@ export const PRODUCTS: Product[] = [
     type: 'cold',
     onSale: true,
     saleText: "HEALTHY DAY",
-    image: "/images/ensalada.png"
-  },
+    image: "https://images.unsplash.com/photo-1568308853224-1f17b4084076?q=80&w=1074&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
   {
     id: 5,
     name: "Rebanada de pizza",
