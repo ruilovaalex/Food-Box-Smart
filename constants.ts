@@ -30,18 +30,18 @@ export const PRODUCTS: Product[] = [
     id: 4,
     name: "Ensalada de frutas de mango",
     price: 3.50,
-    originalPrice: 4.50,
+    originalPrice: 1.25,
     type: 'cold',
     onSale: true,
     saleText: "HEALTHY DAY",
-    image: "https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?q=80&w=800&auto=format&fit=crop"
+    image: "/images/ensalada.png"
   },
   {
     id: 5,
     name: "Rebanada de pizza",
     price: 2.50,
     type: 'hot',
-    image: "https://images.unsplash.com/photo-1541745537411-b8046dc6d66c?q=80&w=800&auto=format&fit=crop"
+    image: "https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?q=80&w=800&auto=format&fit=crop"
   },
   {
     id: 6,
@@ -74,4 +74,4 @@ export const PRODUCTS: Product[] = [
 ];
 
 export const MOCK_USER_ID = "user-123";
-export const MOCK_ADMIN_ID = "admin-999";;
+export const MOCK_ADMIN_ID = "admin-999";
