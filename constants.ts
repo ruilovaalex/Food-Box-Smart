@@ -30,17 +30,18 @@ export const PRODUCTS: Product[] = [
     id: 4,
     name: "Ensalada de frutas de mango",
     price: 3.50,
-    originalPrice: 1.25,
+    originalPrice: 4.50,
     type: 'cold',
     onSale: true,
     saleText: "HEALTHY DAY",
     image: "https://images.unsplash.com/photo-1568308853224-1f17b4084076?q=80&w=1074&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+  },
   {
     id: 5,
     name: "Rebanada de pizza",
     price: 2.50,
     type: 'hot',
-    image: "https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?q=80&w=800&auto=format&fit=crop"
+    image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=800&auto=format&fit=crop"
   },
   {
     id: 6,
